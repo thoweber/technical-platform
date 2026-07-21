@@ -1,0 +1,307 @@
+name: Build WSL Distribution and Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE_NAME: wsl-ubuntu-custom
+  DISTRIBUTION_NAME: CustomWSL
+  REPREPRO_DIR: apt-repo
+  CODENAME: noble
+
+jobs:
+  build-packages:
+    name: Build Custom Debian Packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up build environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev build-essential fakeroot
+
+      - name: Build .deb packages
+        run: |
+          mkdir -p built-packages
+
+          # Find and build all packages in packages/ directory
+          if [ -d "packages" ]; then
+            for pkg_dir in packages/*/; do
+              if [ -d "$pkg_dir/DEBIAN" ]; then
+                pkg_name=$(basename "$pkg_dir")
+                echo "Building package: $pkg_name"
+                dpkg-deb --build "$pkg_dir" "built-packages/${pkg_name}.deb"
+              fi
+            done
+          fi
+
+          ls -lh built-packages/
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-packages
+          path: built-packages/*.deb
+          if-no-files-found: ignore
+
+  update-apt-repo:
+    name: Update APT Repository and Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-packages
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+          path: built-packages
+        continue-on-error: true
+
+      - name: Set up reprepro
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro gnupg
+
+      - name: Initialize reprepro repository
+        run: |
+          mkdir -p ${{ env.REPREPRO_DIR }}/conf
+
+          cat > ${{ env.REPREPRO_DIR }}/conf/distributions <<EOF
+          Origin: Custom WSL Repository
+          Label: Custom WSL
+          Codename: ${{ env.CODENAME }}
+          Architectures: amd64 arm64 source
+          Components: main
+          Description: Custom packages for WSL Ubuntu distribution
+          SignWith: no
+          EOF
+
+          cat > ${{ env.REPREPRO_DIR }}/conf/options <<EOF
+          verbose
+          basedir .
+          EOF
+
+      - name: Add packages to repository
+        run: |
+          cd ${{ env.REPREPRO_DIR }}
+
+          if [ -d "../built-packages" ] && [ "$(ls -A ../built-packages/*.deb 2>/dev/null)" ]; then
+            for deb in ../built-packages/*.deb; do
+              echo "Adding package: $deb"
+              reprepro includedeb ${{ env.CODENAME }} "$deb"
+            done
+          else
+            echo "No packages to add"
+          fi
+
+      - name: Generate repository index
+        run: |
+          cd ${{ env.REPREPRO_DIR }}
+          reprepro export ${{ env.CODENAME }}
+          reprepro list ${{ env.CODENAME }}
+
+      - name: Create GitHub Pages structure
+        run: |
+          mkdir -p gh-pages
+          cp -r ${{ env.REPREPRO_DIR }}/dists gh-pages/
+          cp -r ${{ env.REPREPRO_DIR }}/pool gh-pages/
+
+          # Create index.html for repository
+          cat > gh-pages/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Custom WSL APT Repository</title>
+          </head>
+          <body>
+              <h1>Custom WSL Ubuntu APT Repository</h1>
+              <p>Add this repository to your sources:</p>
+              <pre>deb [trusted=yes] https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} ${{ env.CODENAME }} main</pre>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages
+          force_orphan: true
+
+  build-wsl-image:
+    name: Build WSL Distribution Image
+    runs-on: ubuntu-latest
+    needs: update-apt-repo
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+          path: packages-built
+        continue-on-error: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          # Build with custom APT repository URL
+          docker build \
+            --build-arg APT_REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
+            --tag ${{ env.DOCKER_IMAGE_NAME }}:latest \
+            --file Dockerfile \
+            .
+
+      - name: Export Docker rootfs to tar.gz
+        run: |
+          # Create container and export filesystem
+          container_id=$(docker create ${{ env.DOCKER_IMAGE_NAME }}:latest)
+          docker export $container_id | gzip > ${{ env.DISTRIBUTION_NAME }}.tar.gz
+          docker rm $container_id
+
+          ls -lh ${{ env.DISTRIBUTION_NAME }}.tar.gz
+
+      - name: Create WSL distribution installer
+        run: |
+          # Copy tar.gz as .wsl for easier import
+          cp ${{ env.DISTRIBUTION_NAME }}.tar.gz ${{ env.DISTRIBUTION_NAME }}.wsl
+
+          # Create installation instructions
+          cat > INSTALL.txt <<EOF
+          Custom WSL Ubuntu Distribution Installation
+          ===========================================
+
+          To install this custom WSL distribution:
+
+          1. Download the ${{ env.DISTRIBUTION_NAME }}.wsl file
+
+          2. Open PowerShell or Command Prompt and run:
+             wsl --import ${{ env.DISTRIBUTION_NAME }} <InstallLocation> ${{ env.DISTRIBUTION_NAME }}.wsl
+
+             Example:
+             wsl --import ${{ env.DISTRIBUTION_NAME }} C:\\WSL\\${{ env.DISTRIBUTION_NAME }} ${{ env.DISTRIBUTION_NAME }}.wsl
+
+          3. Launch the distribution:
+             wsl -d ${{ env.DISTRIBUTION_NAME }}
+
+          4. Set default user (optional):
+             ${{ env.DISTRIBUTION_NAME }} config --default-user developer
+
+          APT Repository:
+          ---------------
+          This distribution is pre-configured with the custom APT repository:
+          https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+          Features:
+          ---------
+          - Ubuntu Noble (WSL2 optimized)
+          - Systemd enabled
+          - WSLg GUI support
+          - Java 21 (via SDKMAN)
+          - Node 20 (via NVM)
+          - Angular CLI
+          - IntelliJ IDEA Ultimate (via Snap)
+          - Antigravity tool
+          - Custom MCP server port (64343)
+          EOF
+
+      - name: Generate checksums
+        run: |
+          sha256sum ${{ env.DISTRIBUTION_NAME }}.tar.gz > ${{ env.DISTRIBUTION_NAME }}.tar.gz.sha256
+          sha256sum ${{ env.DISTRIBUTION_NAME }}.wsl > ${{ env.DISTRIBUTION_NAME }}.wsl.sha256
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wsl-distribution
+          path: |
+            ${{ env.DISTRIBUTION_NAME }}.tar.gz
+            ${{ env.DISTRIBUTION_NAME }}.wsl
+            ${{ env.DISTRIBUTION_NAME }}.tar.gz.sha256
+            ${{ env.DISTRIBUTION_NAME }}.wsl.sha256
+            INSTALL.txt
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-wsl-image
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wsl-distribution
+          path: release-files
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-files/${{ env.DISTRIBUTION_NAME }}.tar.gz
+            release-files/${{ env.DISTRIBUTION_NAME }}.wsl
+            release-files/${{ env.DISTRIBUTION_NAME }}.tar.gz.sha256
+            release-files/${{ env.DISTRIBUTION_NAME }}.wsl.sha256
+            release-files/INSTALL.txt
+          body: |
+            ## Custom WSL Ubuntu Distribution Release
+
+            This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
+
+            - ✅ Systemd and WSLg GUI support
+            - ☕ Java 21 (SDKMAN)
+            - 🅰️ Angular CLI (Node 20)
+            - 🧠 IntelliJ IDEA Ultimate
+            - 🚀 Antigravity tool
+            - 📦 Custom APT repository integration
+            - 🔧 MCP server configured on port 64343
+
+            ### Installation
+
+            Download `${{ env.DISTRIBUTION_NAME }}.wsl` and run:
+            ```powershell
+            wsl --import ${{ env.DISTRIBUTION_NAME }} <InstallLocation> ${{ env.DISTRIBUTION_NAME }}.wsl
+            ```
+
+            See `INSTALL.txt` for detailed instructions.
+
+            ### APT Repository
+
+            The distribution includes access to custom packages via:
+            ```
+            https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+            ```
+          draft: false
+          prerelease: false
+          generate_release_notes: true
