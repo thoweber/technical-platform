@@ -61,12 +61,9 @@ RUN apt-get update && apt-get install -y snapd \
 # Set up custom APT repository configuration
 # This will be replaced with actual repository URL during CI/CD
 ARG APT_REPO_URL="https://thoweber.github.io/technical-platform"
-RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/custom-wsl.list
-
-# Install custom packages from APT repository
-# Note: Local packages can be added during workflow by downloading built artifacts
-RUN apt-get update || true && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/custom-wsl.list \
+    && apt-get update -o Acquire::AllowInsecureRepositories=true || echo "Custom repo not yet available" \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Switch to user for SDKMAN and Node installation
 USER $USERNAME
@@ -103,13 +100,16 @@ RUN echo '' >> ~/.bashrc && \
 USER root
 
 # Enable WSLg GUI support
-RUN apt-get update && apt-get install -y \
+# Remove custom repo temporarily to avoid apt-get update failures during build
+RUN rm -f /etc/apt/sources.list.d/custom-wsl.list \
+    && apt-get update && apt-get install -y \
     x11-apps \
     mesa-utils \
     libgl1-mesa-dri \
     libglx-mesa0 \
     libgl1 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/custom-wsl.list
 
 # Set default user
 USER $USERNAME

@@ -24,12 +24,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        uses: actions/checkout@v5
 
       - name: Set up build environment
         run: |
@@ -64,7 +59,7 @@ jobs:
 
       - name: Upload package artifacts
         if: steps.build.outputs.packages_built == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: debian-packages
           path: built-packages/*.deb
@@ -82,15 +77,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        uses: actions/checkout@v5
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: debian-packages
           path: built-packages
@@ -189,17 +179,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: debian-packages
           path: packages-built
         continue-on-error: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build Docker image
         run: |
@@ -256,7 +246,7 @@ jobs:
           - Systemd enabled
           - WSLg GUI support
           - Java 21 (via SDKMAN)
-          - Node 20 (via NVM)
+          - Node 24 LTS (via NVM)
           - Angular CLI
           - IntelliJ IDEA Ultimate (via Snap)
           - Antigravity tool
@@ -269,7 +259,7 @@ jobs:
           sha256sum ${{ env.DISTRIBUTION_NAME }}.wsl > ${{ env.DISTRIBUTION_NAME }}.wsl.sha256
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wsl-distribution
           path: |
@@ -290,16 +280,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download distribution artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: wsl-distribution
           path: release-files
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             release-files/${{ env.DISTRIBUTION_NAME }}.tar.gz
@@ -314,7 +304,7 @@ jobs:
 
             - ✅ Systemd and WSLg GUI support
             - ☕ Java 21 (SDKMAN)
-            - 🅰️ Angular CLI (Node 20)
+            - 🅰️ Angular CLI (Node 24 LTS)
             - 🧠 IntelliJ IDEA Ultimate
             - 🚀 Antigravity tool
             - 📦 Custom APT repository integration
