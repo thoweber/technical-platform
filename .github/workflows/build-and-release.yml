@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE_NAME: wsl-ubuntu-custom
-  DISTRIBUTION_NAME: CustomWSL
-  REPREPRO_DIR: apt-repo
+  DOCKER_IMAGE_NAME: tp-ubuntu
+  DISTRIBUTION_NAME: TechnicalPlatform
+  REPREPRO_DIR: tp-apt-repo
   CODENAME: noble
 
 jobs:
@@ -108,8 +108,8 @@ jobs:
           mkdir -p ${{ env.REPREPRO_DIR }}/conf
 
           cat > ${{ env.REPREPRO_DIR }}/conf/distributions <<EOF
-          Origin: Custom WSL Repository
-          Label: Custom WSL
+          Origin: Technical Platform Repository
+          Label: Technical Platform
           Codename: ${{ env.CODENAME }}
           Architectures: amd64 arm64 source
           Components: main
@@ -154,10 +154,10 @@ jobs:
           <!DOCTYPE html>
           <html>
           <head>
-              <title>Custom WSL APT Repository</title>
+              <title>Technical Platform APT Repository</title>
           </head>
           <body>
-              <h1>Custom WSL Ubuntu APT Repository</h1>
+              <h1>Technical Platform Ubuntu APT Repository</h1>
               <p>Add this repository to your sources:</p>
               <pre>deb [trusted=yes] https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} ${{ env.CODENAME }} main</pre>
           </body>
@@ -216,7 +216,7 @@ jobs:
 
           # Create installation instructions
           cat > INSTALL.txt <<EOF
-          Custom WSL Ubuntu Distribution Installation
+          Technical Platform Ubuntu Distribution Installation
           ===========================================
 
           To install this custom WSL distribution:
@@ -298,7 +298,7 @@ jobs:
             release-files/${{ env.DISTRIBUTION_NAME }}.wsl.sha256
             release-files/INSTALL.txt
           body: |
-            ## Custom WSL Ubuntu Distribution Release
+            ## Technical Platform Ubuntu Distribution Release
 
             This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
 

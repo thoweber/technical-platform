@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for Custom WSL Ubuntu Distribution
+# Multi-stage Dockerfile for Technical Platform Ubuntu Distribution
 # Base: Ubuntu Noble Minimal with systemd, SDKMAN, Node 24 LTS, and custom APT repository
 
 FROM ubuntu:noble AS base
@@ -79,7 +79,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # Set up custom APT repository configuration
 ARG APT_REPO_URL="https://thoweber.github.io/technical-platform"
-RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/custom-wsl.list
+RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/technical-platform.list
 
 # Note: Development tools are available as optional tp-* packages:
 # - tp-sdkman-java: Installs SDKMAN with Java 25

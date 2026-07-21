@@ -1,6 +1,6 @@
 # Publishing Guide
 
-This guide describes the complete publishing process for the Custom WSL Ubuntu Distribution, including all workflow options and manual steps.
+This guide describes the complete publishing process for the Technical Platform Ubuntu Distribution, including all workflow options and manual steps.
 
 ## Table of Contents
 
@@ -266,7 +266,7 @@ Follow semantic versioning:
 1. Download built packages
 2. Install `reprepro` and `gnupg`
 3. Initialize reprepro repository structure:
-   - Creates `apt-repo/conf/distributions` file
+   - Creates `tp-apt-repo/conf/distributions` file
    - Configures for Ubuntu Noble (`noble` codename)
    - Supports `amd64`, `arm64`, and `source` architectures
 4. Add packages to repository (`reprepro includedeb`)
@@ -307,15 +307,15 @@ Follow semantic versioning:
 9. Upload artifacts
 
 **Artifacts**: `wsl-distribution` containing:
-- `CustomWSL.tar.gz` - Standard gzipped tarball
-- `CustomWSL.wsl` - WSL installer format
-- `CustomWSL.tar.gz.sha256` - Checksum file
-- `CustomWSL.wsl.sha256` - Checksum file
+- `TechnicalPlatform.tar.gz` - Standard gzipped tarball
+- `TechnicalPlatform.wsl` - WSL installer format
+- `TechnicalPlatform.tar.gz.sha256` - Checksum file
+- `TechnicalPlatform.wsl.sha256` - Checksum file
 - `INSTALL.txt` - Installation instructions
 
 **Environment Variables**:
-- `DOCKER_IMAGE_NAME`: `wsl-ubuntu-custom`
-- `DISTRIBUTION_NAME`: `CustomWSL`
+- `DOCKER_IMAGE_NAME`: `tp-ubuntu`
+- `DISTRIBUTION_NAME`: `TechnicalPlatform`
 - `CODENAME`: `noble`
 
 ---
@@ -340,10 +340,10 @@ Follow semantic versioning:
    - All distribution files attached
 
 **Release Assets**:
-- `CustomWSL.tar.gz`
-- `CustomWSL.wsl`
-- `CustomWSL.tar.gz.sha256`
-- `CustomWSL.wsl.sha256`
+- `TechnicalPlatform.tar.gz`
+- `TechnicalPlatform.wsl`
+- `TechnicalPlatform.tar.gz.sha256`
+- `TechnicalPlatform.wsl.sha256`
 - `INSTALL.txt`
 
 **Release Configuration**:
@@ -367,17 +367,17 @@ dpkg-deb --build . ../../built-packages/my-package.deb
 # 2. Build Docker image
 docker build \
   --build-arg APT_REPO_URL="https://username.github.io/repo-name" \
-  --tag wsl-ubuntu-custom:latest \
+  --tag tp-ubuntu:latest \
   --file Dockerfile \
   .
 
 # 3. Export rootfs
-container_id=$(docker create wsl-ubuntu-custom:latest)
-docker export $container_id | gzip > CustomWSL.tar.gz
+container_id=$(docker create tp-ubuntu:latest)
+docker export $container_id | gzip > TechnicalPlatform.tar.gz
 docker rm $container_id
 
 # 4. Import to WSL
-wsl --import CustomWSL C:\WSL\CustomWSL CustomWSL.tar.gz
+wsl --import TechnicalPlatform C:\WSL\TechnicalPlatform TechnicalPlatform.tar.gz
 ```
 
 ### Managing APT Repository Manually
@@ -387,10 +387,10 @@ wsl --import CustomWSL C:\WSL\CustomWSL CustomWSL.tar.gz
 sudo apt-get install reprepro
 
 # Initialize repository
-mkdir -p apt-repo/conf
-cat > apt-repo/conf/distributions <<EOF
-Origin: Custom WSL Repository
-Label: Custom WSL
+mkdir -p tp-apt-repo/conf
+cat > tp-apt-repo/conf/distributions <<EOF
+Origin: Technical Platform Repository
+Label: Technical Platform
 Codename: noble
 Architectures: amd64 arm64 source
 Components: main
@@ -412,8 +412,8 @@ reprepro list noble
 ```bash
 # Copy repository structure
 mkdir -p gh-pages
-cp -r apt-repo/dists gh-pages/
-cp -r apt-repo/pool gh-pages/
+cp -r tp-apt-repo/dists gh-pages/
+cp -r tp-apt-repo/pool gh-pages/
 
 # Deploy using gh-pages branch
 git checkout --orphan gh-pages
@@ -446,7 +446,7 @@ git push origin gh-pages --force
 - Check GitHub Pages is enabled in repository settings
 - Verify workflow has `pages: write` permission
 - Ensure `.deb` files are valid: `dpkg-deb -I package.deb`
-- Check reprepro configuration in `apt-repo/conf/distributions`
+- Check reprepro configuration in `tp-apt-repo/conf/distributions`
 
 ### Workflow Fails at "Build WSL Image"
 
@@ -485,7 +485,7 @@ git push origin gh-pages --force
 **Solutions**:
 - Verify `.tar.gz` or `.wsl` file is not corrupted (check SHA256)
 - Ensure WSL2 is installed: `wsl --set-default-version 2`
-- Try with full path: `wsl --import CustomWSL C:\WSL\CustomWSL C:\Downloads\CustomWSL.wsl`
+- Try with full path: `wsl --import TechnicalPlatform C:\WSL\TechnicalPlatform C:\Downloads\TechnicalPlatform.wsl`
 - Check Windows has sufficient disk space
 
 ---
@@ -521,9 +521,9 @@ Modify these in `.github/workflows/build-and-release.yml`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOCKER_IMAGE_NAME` | `wsl-ubuntu-custom` | Docker image tag name |
-| `DISTRIBUTION_NAME` | `CustomWSL` | Output filename and WSL distribution name |
-| `REPREPRO_DIR` | `apt-repo` | Directory for APT repository structure |
+| `DOCKER_IMAGE_NAME` | `tp-ubuntu` | Docker image tag name |
+| `DISTRIBUTION_NAME` | `TechnicalPlatform` | Output filename and WSL distribution name |
+| `REPREPRO_DIR` | `tp-apt-repo` | Directory for APT repository structure |
 | `CODENAME` | `noble` | Ubuntu codename (noble = 24.04) |
 
 ### Workflow Customization

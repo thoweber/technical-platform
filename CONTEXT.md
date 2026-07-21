@@ -1,4 +1,4 @@
-# Custom WSL Ubuntu Distribution & Ecosystem Architecture
+# Technical Platform Ubuntu Distribution & Ecosystem Architecture
 
 ## 1. Goals & System Architecture
 - **Distribution Base:** Ubuntu (Noble) customized for WSL2 with WSLg GUI support.
