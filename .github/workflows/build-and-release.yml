@@ -80,7 +80,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: debian-packages
           path: built-packages
@@ -182,7 +182,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: debian-packages
           path: packages-built
@@ -283,7 +283,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download distribution artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: wsl-distribution
           path: release-files
@@ -311,7 +311,7 @@ jobs:
             This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
 
             - ✅ Systemd and WSLg GUI support
-            - ☕ Java 21 (SDKMAN)
+            - ☕ Java 25 (SDKMAN)
             - 🅰️ Angular CLI (Node 24 LTS)
             - 🧠 IntelliJ IDEA Ultimate
             - 🚀 Antigravity tool

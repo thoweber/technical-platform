@@ -2,7 +2,7 @@
 
 ## 1. Goals & System Architecture
 - **Distribution Base:** Ubuntu (Noble) customized for WSL2 with WSLg GUI support.
-- **Development Focus:** Java 21 (via SDKMAN) and Angular (Node 20).
+- **Development Focus:** Java 25 (via SDKMAN) and Angular (Node 24).
 - **IDE & Tooling:**
     - IntelliJ IDEA Ultimate running natively inside WSL via Snap (`--classic`).
     - Antigravity running as a native Linux binary inside WSL (`~/.local/bin/antigravity`).
