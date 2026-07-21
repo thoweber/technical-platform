@@ -26,14 +26,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Set up build environment
         run: |
           sudo apt-get update
           sudo apt-get install -y dpkg-dev build-essential fakeroot
 
       - name: Build .deb packages
+        id: build
         run: |
           mkdir -p built-packages
+          PACKAGES_BUILT=false
 
           # Find and build all packages in packages/ directory
           if [ -d "packages" ]; then
@@ -42,18 +49,25 @@ jobs:
                 pkg_name=$(basename "$pkg_dir")
                 echo "Building package: $pkg_name"
                 dpkg-deb --build "$pkg_dir" "built-packages/${pkg_name}.deb"
+                PACKAGES_BUILT=true
               fi
             done
           fi
 
-          ls -lh built-packages/
+          if [ "$PACKAGES_BUILT" = "true" ]; then
+            echo "packages_built=true" >> $GITHUB_OUTPUT
+            ls -lh built-packages/
+          else
+            echo "packages_built=false" >> $GITHUB_OUTPUT
+            echo "No packages found to build"
+          fi
 
       - name: Upload package artifacts
+        if: steps.build.outputs.packages_built == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: debian-packages
           path: built-packages/*.deb
-          if-no-files-found: ignore
 
   update-apt-repo:
     name: Update APT Repository and Deploy to GitHub Pages
@@ -70,12 +84,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Download package artifacts
         uses: actions/download-artifact@v4
         with:
           name: debian-packages
           path: built-packages
         continue-on-error: true
+
+      - name: Check if packages were downloaded
+        id: check_packages
+        run: |
+          if [ -d "built-packages" ] && [ -n "$(ls -A built-packages/*.deb 2>/dev/null)" ]; then
+            echo "has_packages=true" >> $GITHUB_OUTPUT
+            echo "Packages found:"
+            ls -lh built-packages/
+          else
+            echo "has_packages=false" >> $GITHUB_OUTPUT
+            echo "No packages downloaded"
+          fi
 
       - name: Set up reprepro
         run: |
@@ -101,17 +132,13 @@ jobs:
           EOF
 
       - name: Add packages to repository
+        if: steps.check_packages.outputs.has_packages == 'true'
         run: |
           cd ${{ env.REPREPRO_DIR }}
-
-          if [ -d "../built-packages" ] && [ "$(ls -A ../built-packages/*.deb 2>/dev/null)" ]; then
-            for deb in ../built-packages/*.deb; do
-              echo "Adding package: $deb"
-              reprepro includedeb ${{ env.CODENAME }} "$deb"
-            done
-          else
-            echo "No packages to add"
-          fi
+          for deb in ../built-packages/*.deb; do
+            echo "Adding package: $deb"
+            reprepro includedeb ${{ env.CODENAME }} "$deb"
+          done
 
       - name: Generate repository index
         run: |
