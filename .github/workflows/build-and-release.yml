@@ -93,7 +93,6 @@ jobs:
           Architectures: amd64 arm64 source
           Components: main
           Description: Custom packages for WSL Ubuntu distribution
-          SignWith: no
           EOF
 
           cat > ${{ env.REPREPRO_DIR }}/conf/options <<EOF
