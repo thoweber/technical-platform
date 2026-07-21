@@ -64,16 +64,9 @@ RUN apt-get update && apt-get install -y snapd \
 ARG APT_REPO_URL="https://thoweber.github.io/technical-platform"
 RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/custom-wsl.list
 
-# Copy custom packages if building with local packages
-COPY --chown=root:root packages/*.deb /tmp/packages/ 2>/dev/null || true
-
-# Install custom packages from local if available, otherwise update from repo
-RUN if [ -d /tmp/packages ] && [ "$(ls -A /tmp/packages/*.deb 2>/dev/null)" ]; then \
-        dpkg -i /tmp/packages/*.deb || apt-get install -f -y; \
-        rm -rf /tmp/packages; \
-    else \
-        apt-get update || true; \
-    fi && \
+# Install custom packages from APT repository
+# Note: Local packages can be added during workflow by downloading built artifacts
+RUN apt-get update || true && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Switch to user for SDKMAN and Node installation
