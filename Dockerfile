@@ -106,7 +106,9 @@ USER root
 RUN apt-get update && apt-get install -y \
     x11-apps \
     mesa-utils \
-    libgl1-mesa-glx \
+    libgl1-mesa-dri \
+    libglx-mesa0 \
+    libgl1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set default user
