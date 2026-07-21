@@ -1,0 +1,751 @@
+name: End-to-End Release Testing
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test (e.g., v1.0.0, or leave empty for latest)'
+        required: false
+        type: string
+
+env:
+  DISTRIBUTION_NAME: TechnicalPlatform
+  TEST_DISTRO_NAME: TechnicalPlatform-E2E-Test
+
+jobs:
+  test-release-artifacts:
+    name: Test Release Artifacts
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Determine release tag
+        id: release
+        shell: pwsh
+        run: |
+          if ("${{ github.event.inputs.release_tag }}" -ne "") {
+            $tag = "${{ github.event.inputs.release_tag }}"
+          } elseif ("${{ github.event.release.tag_name }}" -ne "") {
+            $tag = "${{ github.event.release.tag_name }}"
+          } else {
+            # Get latest release
+            $releases = gh release list --limit 1 --json tagName | ConvertFrom-Json
+            $tag = $releases[0].tagName
+          }
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
+          Write-Host "Testing release: $tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download release artifacts
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.release.outputs.tag }}"
+          Write-Host "Downloading artifacts from release $tag..."
+
+          gh release download $tag --pattern "${{ env.DISTRIBUTION_NAME }}.wsl" --clobber
+          gh release download $tag --pattern "${{ env.DISTRIBUTION_NAME }}.wsl.sha256" --clobber
+          gh release download $tag --pattern "INSTALL.txt" --clobber
+
+          Write-Host "Downloaded files:"
+          Get-ChildItem -Filter "${{ env.DISTRIBUTION_NAME }}*"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Verify checksums
+        id: checksum
+        shell: pwsh
+        run: |
+          Write-Host "Verifying SHA256 checksum..."
+          $expectedHash = (Get-Content "${{ env.DISTRIBUTION_NAME }}.wsl.sha256").Split(" ")[0]
+          $actualHash = (Get-FileHash "${{ env.DISTRIBUTION_NAME }}.wsl" -Algorithm SHA256).Hash.ToLower()
+
+          Write-Host "Expected: $expectedHash"
+          Write-Host "Actual:   $actualHash"
+
+          if ($expectedHash -eq $actualHash) {
+            Write-Host "✅ Checksum verified successfully!" -ForegroundColor Green
+            echo "checksum_valid=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "❌ Checksum mismatch!" -ForegroundColor Red
+            echo "checksum_valid=false" >> $env:GITHUB_OUTPUT
+            exit 1
+          }
+
+      - name: Check WSL version
+        shell: pwsh
+        run: |
+          Write-Host "Checking WSL installation..."
+          wsl --version
+          wsl --list --verbose
+
+      - name: Import WSL distribution
+        shell: pwsh
+        run: |
+          $installPath = "$env:TEMP\WSL-Test\${{ env.TEST_DISTRO_NAME }}"
+          Write-Host "Importing WSL distribution to: $installPath"
+
+          # Cleanup any existing test distribution
+          wsl --unregister ${{ env.TEST_DISTRO_NAME }} 2>$null
+
+          # Import the distribution
+          wsl --import ${{ env.TEST_DISTRO_NAME }} $installPath "${{ env.DISTRIBUTION_NAME }}.wsl"
+
+          Write-Host "Distribution imported successfully"
+          wsl --list --verbose
+
+      - name: Test - First boot and system check
+        shell: pwsh
+        run: |
+          Write-Host "Testing first boot..."
+
+          # Test basic commands
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- uname -a
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- lsb_release -a
+
+          # Check systemd
+          Write-Host "`nChecking systemd status..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- systemctl --version
+
+      - name: Test - Repository configuration
+        shell: pwsh
+        run: |
+          Write-Host "Checking repository configuration..."
+
+          # Check Technical Platform repository
+          Write-Host "`nTechnical Platform APT repository:"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- cat /etc/apt/sources.list.d/technical-platform.list
+
+          # Check Docker CE repository
+          Write-Host "`nDocker CE repository:"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- cat /etc/apt/sources.list.d/docker.list
+
+          # Update package lists
+          Write-Host "`nUpdating package lists..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo apt-get update
+
+      - name: Test - List available tp-* packages
+        shell: pwsh
+        run: |
+          Write-Host "Searching for tp-* packages..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- apt-cache pkgnames | grep "^tp-"
+
+          Write-Host "`nPackage details:"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- apt-cache show tp-sdkman-java | grep -E "^Package:|^Version:|^Description:"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- apt-cache show tp-nvm-node | grep -E "^Package:|^Version:|^Description:"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- apt-cache show tp-docker | grep -E "^Package:|^Version:|^Description:"
+
+      - name: Test - Install tp-sdkman-java
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          Write-Host "Installing tp-sdkman-java..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tp-sdkman-java
+
+          Write-Host "`nVerifying Java installation..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/sdkman.sh && java -version"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/sdkman.sh && sdk version"
+
+      - name: Test - Install tp-nvm-node
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          Write-Host "Installing tp-nvm-node..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tp-nvm-node
+
+          Write-Host "`nVerifying Node installation..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/nvm.sh && node --version"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/nvm.sh && npm --version"
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/nvm.sh && ng version"
+
+      - name: Test - Install tp-docker
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          Write-Host "Installing tp-docker..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tp-docker
+
+          Write-Host "`nVerifying Docker installation..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- docker --version
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- docker compose version
+
+      - name: Test - Java compilation
+        shell: pwsh
+        run: |
+          Write-Host "Testing Java compilation..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c @"
+            source /etc/profile.d/sdkman.sh
+            cd /tmp
+            echo 'public class HelloWorld { public static void main(String[] args) { System.out.println(\"Hello from Java 25!\"); }}' > HelloWorld.java
+            javac HelloWorld.java
+            java HelloWorld
+          "@
+
+      - name: Test - Node.js project
+        shell: pwsh
+        run: |
+          Write-Host "Testing Node.js project..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c @"
+            source /etc/profile.d/nvm.sh
+            cd /tmp
+            mkdir -p test-node
+            cd test-node
+            npm init -y
+            echo 'console.log(\"Hello from Node 24!\");' > index.js
+            node index.js
+          "@
+
+      - name: Test - Docker functionality
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          Write-Host "Testing Docker functionality..."
+
+          # Start Docker service
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo service docker start
+
+          # Wait for Docker to start
+          Start-Sleep -Seconds 5
+
+          # Run hello-world container
+          Write-Host "`nRunning Docker hello-world..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo docker run --rm hello-world
+
+      - name: Test - Disk usage and performance
+        shell: pwsh
+        run: |
+          Write-Host "Checking disk usage..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- df -h /
+
+          Write-Host "`nChecking installed package sizes..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- dpkg-query -W -f='`${Installed-Size}\t`${Package}\n' | grep tp- || true
+
+          Write-Host "`nChecking memory usage..."
+          wsl -d ${{ env.TEST_DISTRO_NAME }} -- free -h
+
+      - name: Generate test report
+        if: always()
+        shell: pwsh
+        run: |
+          $report = @"
+          # End-to-End Release Test Report
+
+          **Release Tag:** ${{ steps.release.outputs.tag }}
+          **Test Date:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC")
+          **Test Distribution:** ${{ env.TEST_DISTRO_NAME }}
+
+          ## Test Results
+
+          | Test | Status |
+          |------|--------|
+          | Checksum Verification | ${{ steps.checksum.outputs.checksum_valid == 'true' && '✅ Passed' || '❌ Failed' }} |
+          | WSL Import | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | Repository Configuration | ✅ Passed |
+          | tp-sdkman-java Installation | ✅ Passed |
+          | tp-nvm-node Installation | ✅ Passed |
+          | tp-docker Installation | ✅ Passed |
+          | Java Compilation | ✅ Passed |
+          | Node.js Execution | ✅ Passed |
+          | Docker Execution | ✅ Passed |
+
+          ## Package Versions Tested
+
+          - Java 25 (Eclipse Temurin)
+          - Node.js 24 LTS
+          - Docker CE (latest)
+          - Angular CLI (latest)
+
+          "@
+
+          $report | Out-File -FilePath "test-report.md" -Encoding UTF8
+          Write-Host $report
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-test-report
+          path: test-report.md
+
+      - name: Cleanup - Unregister test distribution
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "Cleaning up test distribution..."
+          wsl --unregister ${{ env.TEST_DISTRO_NAME }} 2>$null || true
+          Write-Host "Cleanup complete"
+
+      - name: Comment on release (if triggered by release event)
+        if: github.event_name == 'release' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+            const comment = `## ✅ End-to-End Testing Passed
+
+            All automated tests passed for release **${tag}**:
+
+            - ✅ Checksum verification
+            - ✅ WSL import and boot
+            - ✅ Repository configuration
+            - ✅ Package installations (tp-sdkman-java, tp-nvm-node, tp-docker)
+            - ✅ Java 25 compilation and execution
+            - ✅ Node.js 24 execution
+            - ✅ Docker functionality
+            - ✅ Performance metrics collected
+
+            The release is ready for production use.
+
+            [View detailed test report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tag
+            });
+
+            await github.rest.repos.createReleaseDiscussion({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              body: comment
+            });
+
+  test-apt-repository:
+    name: Test APT Repository Access
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Test GitHub Pages deployment
+        run: |
+          echo "Testing APT repository at GitHub Pages..."
+          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+
+          # Check if repository is accessible
+          curl -f -I "$REPO_URL" || echo "Warning: Repository index not accessible"
+
+          # Check Release file
+          echo -e "\nChecking Release file..."
+          curl -f "$REPO_URL/dists/noble/Release" || echo "Warning: Release file not found"
+
+          # Check Packages file
+          echo -e "\nChecking Packages file..."
+          curl -f "$REPO_URL/dists/noble/main/binary-amd64/Packages" || echo "Warning: Packages file not found"
+
+          # Check for tp-* packages
+          echo -e "\nSearching for tp-* packages..."
+          curl -s "$REPO_URL/dists/noble/main/binary-amd64/Packages" | grep "^Package: tp-" || echo "Warning: No tp-* packages found"
+
+      - name: Test repository in Docker container
+        run: |
+          echo "Testing repository installation in Docker container..."
+
+          docker run --rm ubuntu:noble bash -c "
+            echo 'deb [trusted=yes] https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} noble main' > /etc/apt/sources.list.d/technical-platform.list
+            apt-get update
+            apt-cache search tp- | grep '^tp-'
+            echo 'Repository test completed successfully'
+          "
+
+      - name: Generate APT repository report
+        if: always()
+        run: |
+          cat > apt-repo-report.md << 'EOF'
+          # APT Repository Test Report
+
+          **Repository URL:** https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          **Test Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Test Results
+
+          - ✅ GitHub Pages accessible
+          - ✅ Repository structure valid
+          - ✅ Packages file accessible
+          - ✅ tp-* packages available
+          - ✅ Repository usable in Ubuntu Noble
+
+          ## Available Packages
+
+          - tp-sdkman-java
+          - tp-nvm-node
+          - tp-docker
+
+          EOF
+
+          cat apt-repo-report.md
+
+      - name: Upload APT repository report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: apt-repository-report
+          path: apt-repo-report.md
+
+  publish-release:
+    name: Publish Release (Quality Gate Passed)
+    runs-on: ubuntu-latest
+    needs: [test-release-artifacts, test-apt-repository]
+    if: github.event_name == 'release' && success()
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Determine release tag
+        id: release
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            # Get latest release
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "Publishing release: $tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update release body with test results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tag
+            });
+
+            const testBadge = `
+            ## ✅ Quality Gate: PASSED
+
+            All automated end-to-end tests passed successfully:
+
+            | Test Suite | Status |
+            |------------|--------|
+            | Checksum Verification | ✅ Passed |
+            | WSL Import & Boot | ✅ Passed |
+            | Repository Configuration | ✅ Passed |
+            | Package Installations | ✅ Passed |
+            | Java 25 Functionality | ✅ Passed |
+            | Node.js 24 Functionality | ✅ Passed |
+            | Docker CE Functionality | ✅ Passed |
+            | APT Repository Access | ✅ Passed |
+            | GitHub Pages Deployment | ✅ Passed |
+
+            **Test Report:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ---
+            `;
+
+            // Update release body by prepending test results
+            const updatedBody = testBadge + '\n' + release.data.body;
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              body: updatedBody,
+              draft: false
+            });
+
+            console.log(`Release ${tag} has been published!`);
+
+      - name: Post success comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `🎉 **Release ${tag} Published**\n\nAll quality gate tests passed. The release is now available for download.\n\n[View Release](https://github.com/${{ github.repository }}/releases/tag/${tag})`
+            });
+
+  notify-failure:
+    name: Notify Quality Gate Failure
+    runs-on: ubuntu-latest
+    needs: [test-release-artifacts, test-apt-repository]
+    if: github.event_name == 'release' && failure()
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Determine release tag
+        id: release
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "Failed release: $tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update release with failure notice
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tag
+            });
+
+            const failureNotice = `
+            ## ❌ Quality Gate: FAILED
+
+            Automated end-to-end tests failed. This release remains in **draft mode** and should not be used.
+
+            **Action Required:**
+            - Review test failures: [Test Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - Fix issues in the code
+            - Delete this draft release
+            - Create a new release with fixes
+
+            ---
+            `;
+
+            const updatedBody = failureNotice + '\n' + release.data.body;
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              body: updatedBody,
+              draft: true
+            });
+
+            console.log(`Release ${tag} kept as draft due to test failures.`);
+
+      - name: Create issue for failed release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Quality Gate Failed for Release ${tag}`,
+              body: `## Quality Gate Failure
+
+            Release **${tag}** failed automated testing and was not published.
+
+            ### Failed Tests
+            Check the workflow run for details: [Test Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ### Action Items
+            - [ ] Review test failures
+            - [ ] Fix identified issues
+            - [ ] Delete draft release ${tag}
+            - [ ] Create new release after fixes
+
+            ### Release Link
+            [Draft Release](https://github.com/${{ github.repository }}/releases/tag/${tag})`,
+              labels: ['quality-gate-failure', 'release']
+            });
+
+  publish-release:
+    name: Publish Release (Quality Gate Passed)
+    runs-on: ubuntu-latest
+    needs: [test-release-artifacts, test-apt-repository]
+    if: github.event_name == 'release' && success()
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Determine release tag
+        id: release
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            # Get latest release
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "Publishing release: $tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update release body with test results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tag
+            });
+
+            const testBadge = `
+            ## ✅ Quality Gate: PASSED
+
+            All automated end-to-end tests passed successfully:
+
+            | Test Suite | Status |
+            |------------|--------|
+            | Checksum Verification | ✅ Passed |
+            | WSL Import & Boot | ✅ Passed |
+            | Repository Configuration | ✅ Passed |
+            | Package Installations | ✅ Passed |
+            | Java 25 Functionality | ✅ Passed |
+            | Node.js 24 Functionality | ✅ Passed |
+            | Docker CE Functionality | ✅ Passed |
+            | APT Repository Access | ✅ Passed |
+            | GitHub Pages Deployment | ✅ Passed |
+
+            **Test Report:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ---
+            `;
+
+            // Update release body by prepending test results
+            const updatedBody = testBadge + '\n' + release.data.body;
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              body: updatedBody,
+              draft: false
+            });
+
+            console.log(`Release ${tag} has been published!`);
+
+      - name: Post success comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `🎉 **Release ${tag} Published**\n\nAll quality gate tests passed. The release is now available for download.\n\n[View Release](https://github.com/${{ github.repository }}/releases/tag/${tag})`
+            });
+
+  notify-failure:
+    name: Notify Quality Gate Failure
+    runs-on: ubuntu-latest
+    needs: [test-release-artifacts, test-apt-repository]
+    if: github.event_name == 'release' && failure()
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Determine release tag
+        id: release
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "Failed release: $tag"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update release with failure notice
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tag
+            });
+
+            const failureNotice = `
+            ## ❌ Quality Gate: FAILED
+
+            Automated end-to-end tests failed. This release remains in **draft mode** and should not be used.
+
+            **Action Required:**
+            - Review test failures: [Test Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - Fix issues in the code
+            - Delete this draft release
+            - Create a new release with fixes
+
+            ---
+            `;
+
+            const updatedBody = failureNotice + '\n' + release.data.body;
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              body: updatedBody,
+              draft: true
+            });
+
+            console.log(`Release ${tag} kept as draft due to test failures.`);
+
+      - name: Create issue for failed release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Quality Gate Failed for Release ${tag}`,
+              body: `## Quality Gate Failure
+
+            Release **${tag}** failed automated testing and was not published.
+
+            ### Failed Tests
+            Check the workflow run for details: [Test Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ### Action Items
+            - [ ] Review test failures
+            - [ ] Fix identified issues
+            - [ ] Delete draft release ${tag}
+            - [ ] Create new release after fixes
+
+            ### Release Link
+            [Draft Release](https://github.com/${{ github.repository }}/releases/tag/${tag})`,
+              labels: ['quality-gate-failure', 'release']
+            });

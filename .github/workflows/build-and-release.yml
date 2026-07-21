@@ -288,9 +288,12 @@ jobs:
           name: wsl-distribution
           path: release-files
 
-      - name: Create Release
+      - name: Create Release (as draft)
+        id: create_release
         uses: softprops/action-gh-release@v3
         with:
+          draft: true
+          prerelease: false
           files: |
             release-files/${{ env.DISTRIBUTION_NAME }}.tar.gz
             release-files/${{ env.DISTRIBUTION_NAME }}.wsl
@@ -298,6 +301,11 @@ jobs:
             release-files/${{ env.DISTRIBUTION_NAME }}.wsl.sha256
             release-files/INSTALL.txt
           body: |
+            > **⚠️ This release is in draft mode pending automated quality gate tests.**
+            >
+            > The release will be automatically published once all E2E tests pass.
+
+
             ## Technical Platform Ubuntu Distribution Release
 
             This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
@@ -325,6 +333,4 @@ jobs:
             ```
             https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
             ```
-          draft: false
-          prerelease: false
           generate_release_notes: true
