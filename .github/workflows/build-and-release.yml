@@ -122,8 +122,15 @@ jobs:
       - name: Create GitHub Pages structure
         run: |
           mkdir -p gh-pages
-          cp -r ${{ env.REPREPRO_DIR }}/dists gh-pages/
-          cp -r ${{ env.REPREPRO_DIR }}/pool gh-pages/
+
+          # Copy repository structure (only if directories exist)
+          if [ -d "${{ env.REPREPRO_DIR }}/dists" ]; then
+            cp -r ${{ env.REPREPRO_DIR }}/dists gh-pages/
+          fi
+
+          if [ -d "${{ env.REPREPRO_DIR }}/pool" ]; then
+            cp -r ${{ env.REPREPRO_DIR }}/pool gh-pages/
+          fi
 
           # Create index.html for repository
           cat > gh-pages/index.html <<EOF
