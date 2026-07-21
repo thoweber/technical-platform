@@ -59,7 +59,7 @@ jobs:
 
       - name: Upload package artifacts
         if: steps.build.outputs.packages_built == 'true'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: debian-packages
           path: built-packages/*.deb
@@ -259,7 +259,7 @@ jobs:
           sha256sum ${{ env.DISTRIBUTION_NAME }}.wsl > ${{ env.DISTRIBUTION_NAME }}.wsl.sha256
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wsl-distribution
           path: |
