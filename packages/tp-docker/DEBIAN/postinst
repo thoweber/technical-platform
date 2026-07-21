@@ -1,0 +1,49 @@
+#!/bin/bash
+set -e
+
+# Get the user who invoked sudo (or current user if not using sudo)
+ACTUAL_USER="${SUDO_USER:-${USER}}"
+
+# If we're root and no SUDO_USER is set, try to find the default user
+if [ "$ACTUAL_USER" = "root" ] || [ -z "$ACTUAL_USER" ]; then
+    # Look for user with UID 1000 (default WSL user)
+    ACTUAL_USER=$(getent passwd 1000 | cut -d: -f1)
+fi
+
+# Create docker group if it doesn't exist
+if ! getent group docker > /dev/null 2>&1; then
+    echo "Creating docker group..."
+    groupadd docker
+fi
+
+# Add user to docker group if a valid user was found
+if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+    echo "Adding user '$ACTUAL_USER' to docker group..."
+    usermod -aG docker "$ACTUAL_USER"
+    echo "User '$ACTUAL_USER' has been added to the docker group."
+    echo "You may need to log out and back in for group membership to take effect."
+else
+    echo "Warning: Could not determine user to add to docker group."
+    echo "Please run manually: sudo usermod -aG docker \$USER"
+fi
+
+# Enable and start Docker service if systemd is available
+if command -v systemctl > /dev/null 2>&1; then
+    echo "Enabling Docker service..."
+    systemctl enable docker
+    systemctl start docker || echo "Note: Docker service will start on next boot"
+fi
+
+echo ""
+echo "Docker CE installation complete!"
+echo ""
+echo "Available commands:"
+echo "  docker --version"
+echo "  docker compose version"
+echo "  docker buildx version"
+echo ""
+echo "To verify installation:"
+echo "  docker run hello-world"
+echo ""
+
+exit 0

@@ -1,0 +1,16 @@
+Package: tp-docker
+Version: 1.0.0
+Section: admin
+Priority: optional
+Architecture: all
+Depends: docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin
+Maintainer: Technical Platform <noreply@example.com>
+Description: Docker CE complete installation for Technical Platform WSL
+ This metapackage installs the complete Docker CE suite including:
+ - Docker CE Engine
+ - Docker CLI
+ - containerd runtime
+ - Docker Buildx plugin
+ - Docker Compose plugin
+ The installation automatically adds the invoking user to the docker group
+ for passwordless docker command execution.

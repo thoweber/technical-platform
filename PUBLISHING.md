@@ -57,11 +57,47 @@ The publishing pipeline consists of four automated jobs:
 
 ### Package Directory Structure
 
-If you have custom packages to include, structure them as:
+Custom packages are stored in the `packages/` directory and are automatically built by the CI/CD pipeline.
+
+#### Package Naming Convention
+
+All custom packages use the **`tp-`** prefix (Technical Platform) to identify them as part of this distribution.
+
+**Naming format:** `tp-<component>-<description>`
+
+Examples:
+- `tp-sdkman-java` (SDKMAN with Java)
+- `tp-nvm-node` (NVM with Node)
+- `tp-docker-tools` (Docker utilities)
+
+#### Included Packages
+
+This distribution includes three optional development environment packages:
+
+1. **tp-sdkman-java** - SDKMAN with Java 25 (Eclipse Temurin)
+   - Installs to `/opt/sdkman` (system-wide)
+   - Automatically configures environment via `/etc/profile.d/sdkman.sh`
+   - Install with: `sudo apt-get install tp-sdkman-java`
+
+2. **tp-nvm-node** - NVM with Node.js 24 LTS and Angular CLI
+   - Installs to `/opt/nvm` (system-wide)
+   - Includes Angular CLI pre-installed globally
+   - Automatically configures environment via `/etc/profile.d/nvm.sh`
+   - Install with: `sudo apt-get install tp-nvm-node`
+
+3. **tp-docker** - Docker CE Complete Installation
+   - Installs Docker CE, CLI, containerd, Buildx, and Compose plugins
+   - Automatically adds current user to docker group
+   - Enables and starts Docker service
+   - Install with: `sudo apt-get install tp-docker`
+
+#### Creating Custom Packages
+
+Structure your packages as follows (use `tp-` prefix):
 
 ```
 packages/
-└── my-custom-package/
+└── tp-my-component/
     ├── DEBIAN/
     │   ├── control          # Required: package metadata
     │   ├── postinst         # Optional: post-installation script
@@ -76,7 +112,7 @@ packages/
 
 **Example `DEBIAN/control` file**:
 ```
-Package: my-custom-package
+Package: tp-my-component
 Version: 1.0.0
 Section: utils
 Priority: optional
@@ -85,6 +121,12 @@ Maintainer: Your Name <email@example.com>
 Description: My custom package for WSL
  Extended description goes here.
 ```
+
+**Important Notes for postinst scripts**:
+- Must be executable: `chmod +x DEBIAN/postinst`
+- Should start with `#!/bin/bash` and `set -e`
+- Should handle idempotency (check if already installed)
+- Should exit with `exit 0` on success
 
 ---
 

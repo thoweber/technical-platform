@@ -1,0 +1,11 @@
+Package: tp-sdkman-java
+Version: 1.0.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends: curl, zip, unzip
+Maintainer: Technical Platform <noreply@example.com>
+Description: SDKMAN with Java 25 for Technical Platform WSL
+ This package installs SDKMAN and Java 25 (Temurin) for all users.
+ SDKMAN is a tool for managing parallel versions of multiple SDKs.
+ Java 25 (Eclipse Temurin) is pre-installed and set as default.

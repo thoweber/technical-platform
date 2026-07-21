@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+# Install SDKMAN for all users by placing it in /opt
+export SDKMAN_DIR="/opt/sdkman"
+
+if [ ! -d "$SDKMAN_DIR" ]; then
+    echo "Installing SDKMAN to $SDKMAN_DIR..."
+    curl -s "https://get.sdkman.io" | bash
+
+    # Source SDKMAN and install Java 25
+    source "$SDKMAN_DIR/bin/sdkman-init.sh"
+    sdk install java 25-tem
+    sdk default java 25-tem
+
+    # Cleanup to reduce package size
+    sdk flush archives
+    sdk flush temp
+
+    echo "SDKMAN and Java 25 installed successfully"
+else
+    echo "SDKMAN already installed at $SDKMAN_DIR"
+fi
+
+exit 0

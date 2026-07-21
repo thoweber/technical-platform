@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+# Install NVM for all users by placing it in /opt
+export NVM_DIR="/opt/nvm"
+
+if [ ! -d "$NVM_DIR" ]; then
+    echo "Installing NVM to $NVM_DIR..."
+    mkdir -p "$NVM_DIR"
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | NVM_DIR="$NVM_DIR" bash
+
+    # Source NVM and install Node 24 LTS
+    export NVM_DIR="/opt/nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    nvm install 24
+    nvm use 24
+    nvm alias default 24
+
+    # Install Angular CLI globally
+    npm install -g @angular/cli
+
+    # Cleanup npm cache to reduce size
+    npm cache clean --force
+
+    echo "NVM, Node 24 LTS, and Angular CLI installed successfully"
+else
+    echo "NVM already installed at $NVM_DIR"
+fi
+
+exit 0
