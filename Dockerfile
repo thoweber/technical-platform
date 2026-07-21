@@ -76,9 +76,9 @@ WORKDIR /home/$USERNAME
 RUN curl -s "https://get.sdkman.io" | bash \
     && bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk install java 21.0.5-tem && sdk default java 21.0.5-tem"
 
-# Install Node 20 via NVM
+# Install Node 24 LTS via NVM
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
-    && bash -c "source $HOME/.nvm/nvm.sh && nvm install 20 && nvm use 20 && nvm alias default 20"
+    && bash -c "source $HOME/.nvm/nvm.sh && nvm install 24 && nvm use 24 && nvm alias default 24"
 
 # Install Angular CLI
 RUN bash -c "source $HOME/.nvm/nvm.sh && npm install -g @angular/cli"
