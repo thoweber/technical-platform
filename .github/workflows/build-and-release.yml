@@ -203,8 +203,8 @@ jobs:
         run: |
           # Build with custom APT repository URL and GHA layer cache
           docker buildx build \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
+            --cache-from type=gha,scope=wsl-build \
+            --cache-to type=gha,mode=max,scope=wsl-build \
             --build-arg APT_REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
             --tag ${{ env.DOCKER_IMAGE_NAME }}:latest \
             --file Dockerfile \
@@ -256,15 +256,14 @@ jobs:
           - Ubuntu Noble (WSL2 optimized)
           - Systemd enabled
           - WSLg GUI support
-          - Java 21 (via SDKMAN)
+          - Java 25 (via SDKMAN)
           - Node 24 LTS (via NVM)
-          - Angular CLI
-          - IntelliJ IDEA Ultimate (via Snap)
-          - Antigravity tool
-          - Custom MCP server port (64343)
+          - Docker CE suite
+          - Custom APT repository integration
+          - Google Noto Sans & Color Emoji default fonts
           EOF
 
-      - name: Generate checksums
+      - name: Generate SHA256 checksums
         run: |
           sha256sum ${{ env.DISTRIBUTION_NAME }}.tar.gz > ${{ env.DISTRIBUTION_NAME }}.tar.gz.sha256
           sha256sum ${{ env.DISTRIBUTION_NAME }}.wsl > ${{ env.DISTRIBUTION_NAME }}.wsl.sha256
@@ -327,6 +326,7 @@ jobs:
             - 🔧 MCP server configured on port 64343
           - 🚀 Antigravity CLI
           - 📦 Custom APT repository integration
+          - 🔤 Google Noto Sans & Color Emoji fonts
 
           ### Installation
 
@@ -357,19 +357,19 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists. Uploading assets..."
             gh release upload "$TAG" release-files/* --clobber
-            gh release edit "$TAG" --notes-file release_body.md --draft
+            gh release edit "$TAG" --title "$TAG" --notes-file release_body.md --draft
           else
             # Search for draft release via API
             DRAFT_ID=$(gh api "repos/${{ github.repository }}/releases" --jq ".[] | select(.tag_name == \"$TAG\" or .name == \"$TAG\") | .id")
             if [ -n "$DRAFT_ID" ]; then
               echo "Draft release found (ID: $DRAFT_ID). Uploading assets..."
               gh release upload "$TAG" release-files/* --clobber || gh release upload "$DRAFT_ID" release-files/* --clobber
-              gh release edit "$DRAFT_ID" --notes-file release_body.md --draft
+              gh release edit "$DRAFT_ID" --title "$TAG" --notes-file release_body.md --draft
             else
               echo "Creating new draft release $TAG with assets..."
               gh release create "$TAG" release-files/* \
                 --draft \
-                --title "Technical Platform Release $TAG" \
+                --title "$TAG" \
                 --notes-file release_body.md
             fi
           fi
