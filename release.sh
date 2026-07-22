@@ -6,8 +6,36 @@ set -e
 #   ./release.sh           # Automatically bumps the patch version (e.g. v0.0.3 -> v0.0.4)
 #   ./release.sh v1.0.0    # Specifies an explicit target version
 
-echo "Fetching latest tags from remote..."
+echo "Fetching latest tags and branch status from remote..."
 git fetch --tags --quiet 2>/dev/null || true
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+git fetch origin "$CURRENT_BRANCH" --quiet 2>/dev/null || true
+
+# Check 1: Abort on uncommitted changes
+if [ -n "$(git status --porcelain)" ]; then
+    echo ""
+    echo "❌ Error: Working directory has uncommitted changes."
+    echo "Please commit or stash your changes before releasing:"
+    git status --short
+    echo ""
+    echo "Aborting release."
+    exit 1
+fi
+
+# Check 2: Abort on unpushed commits relative to upstream branch
+UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)
+if [ -n "$UPSTREAM" ]; then
+    UNPUSHED_COMMITS=$(git log @{u}..HEAD --oneline)
+    if [ -n "$UNPUSHED_COMMITS" ]; then
+        echo ""
+        echo "❌ Error: Current branch '$CURRENT_BRANCH' has unpushed commits relative to '$UPSTREAM':"
+        echo "$UNPUSHED_COMMITS"
+        echo ""
+        echo "Please push your commits to remote ('git push') before creating a release."
+        echo "Aborting release."
+        exit 1
+    fi
+fi
 
 # Find the latest tag matching v* using version sorting
 LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
@@ -18,6 +46,7 @@ if [ -n "$1" ]; then
     
     # Check if specified version tag already exists
     if git rev-parse -q --verify "refs/tags/$NEW_VERSION" >/dev/null; then
+        echo ""
         echo "❌ Error: Specified version tag '$NEW_VERSION' already exists."
         echo "Please specify a higher version number or run without arguments for auto-patch bumping."
         exit 1
@@ -53,26 +82,6 @@ else
 fi
 echo " Target release tag:   $NEW_VERSION"
 echo "=========================================="
-
-# Check for uncommitted changes
-if [ -n "$(git status --porcelain)" ]; then
-    echo "⚠️ Working directory has uncommitted changes."
-    git status --short
-    echo ""
-    read -p "Do you want to commit all changes before tagging? (y/N): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Enter commit message: " COMMIT_MSG
-        if [ -z "$COMMIT_MSG" ]; then
-            COMMIT_MSG="Prepare release $NEW_VERSION"
-        fi
-        git add .
-        git commit -m "$COMMIT_MSG"
-        git push origin main
-    else
-        echo "Proceeding with uncommitted local changes..."
-    fi
-fi
 
 # Create annotated tag
 echo "Creating tag $NEW_VERSION..."
