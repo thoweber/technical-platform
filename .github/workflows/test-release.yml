@@ -24,6 +24,10 @@ jobs:
     name: Test Release Artifacts
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      actions: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -46,62 +50,77 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Download release artifacts
-        if: steps.release.outputs.tag != ''
+      - name: Download artifact from parent workflow run
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.id != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: wsl-distribution
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Flatten downloaded artifact subdirectories
         shell: bash
         run: |
-          tag="${{ steps.release.outputs.tag }}"
-          echo "Downloading artifacts for release $tag..."
-
-          # Option 1: Try downloading directly from parent workflow run if triggered by workflow_run
-          if [ -n "${{ github.event.workflow_run.id }}" ]; then
-            echo "Attempting download from parent workflow run ID ${{ github.event.workflow_run.id }}..."
-            gh run download "${{ github.event.workflow_run.id }}" --dir . || true
-          fi
-
-          # Flatten any subdirectories created by gh run download
           if [ -d "wsl-distribution" ]; then
             mv wsl-distribution/* . 2>/dev/null || true
           fi
-          find . -type f \( -name "${{ env.DISTRIBUTION_NAME }}*" -o -name "INSTALL.txt" \) -exec mv {} . \; 2>/dev/null || true
+          find . -mindepth 2 -type f \( -name "${{ env.DISTRIBUTION_NAME }}*" -o -name "INSTALL.txt" \) -exec mv {} . \; 2>/dev/null || true
 
-          # Option 2: If distribution file is missing, download from GitHub Release
-          if [ ! -f "${{ env.DISTRIBUTION_NAME }}.wsl" ] && [ ! -f "${{ env.DISTRIBUTION_NAME }}.tar.gz" ]; then
-            echo "Distribution file missing locally. Attempting download via gh release download..."
-            gh release download "$tag" --dir . --clobber || true
+      - name: Download assets from draft release via GitHub Script
+        if: steps.release.outputs.tag != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
 
-            if [ -d "wsl-distribution" ]; then
-              mv wsl-distribution/* . 2>/dev/null || true
-            fi
-            find . -type f \( -name "${{ env.DISTRIBUTION_NAME }}*" -o -name "INSTALL.txt" \) -exec mv {} . \; 2>/dev/null || true
-          fi
+            if (fs.existsSync('${{ env.DISTRIBUTION_NAME }}.wsl') || fs.existsSync('${{ env.DISTRIBUTION_NAME }}.tar.gz')) {
+              console.log('Distribution file already downloaded from workflow run artifact.');
+              return;
+            }
 
-          # Option 3: Fallback - query REST API for draft release asset endpoints directly
-          if [ ! -f "${{ env.DISTRIBUTION_NAME }}.wsl" ] && [ ! -f "${{ env.DISTRIBUTION_NAME }}.tar.gz" ]; then
-            echo "Attempting REST API draft asset fetch for $tag..."
-            releases_json=$(gh api "repos/${GITHUB_REPOSITORY}/releases")
-            release_id=$(echo "$releases_json" | jq -r ".[] | select(.tag_name == \"$tag\" or .name == \"$tag\" or .draft == true) | .id" | head -n 1)
+            const tag = '${{ steps.release.outputs.tag }}';
+            console.log(`Searching for release assets for tag/name: ${tag}...`);
 
-            if [ -n "$release_id" ] && [ "$release_id" != "null" ]; then
-              echo "Found release ID $release_id. Fetching assets..."
-              assets_json=$(gh api "repos/${GITHUB_REPOSITORY}/releases/$release_id/assets")
-              
-              for row in $(echo "$assets_json" | jq -r '.[] | @base64'); do
-                _jq() {
-                  echo "${row}" | base64 --decode | jq -r "${1}"
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            let release = releases.data.find(r => r.tag_name === tag || r.name === tag);
+            if (!release) {
+              release = releases.data.find(r => r.draft === true);
+            }
+
+            if (!release) {
+              console.log("No matching release found.");
+              return;
+            }
+
+            console.log(`Found release ID ${release.id} (draft: ${release.draft}). Assets count: ${release.assets.length}`);
+
+            for (const asset of release.assets) {
+              console.log(`Downloading asset: ${asset.name}...`);
+              const response = await github.rest.repos.getReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: asset.id,
+                headers: {
+                  accept: 'application/octet-stream'
                 }
-                asset_name=$(_jq '.name')
-                asset_url=$(_jq '.url')
-                echo "Downloading asset: $asset_name"
-                curl -sSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$asset_url" -o "$asset_name"
-              done
-            fi
-          fi
+              });
+              
+              const buffer = Buffer.from(response.data);
+              fs.writeFileSync(asset.name, buffer);
+              console.log(`Saved ${asset.name} (${buffer.length} bytes)`);
+            }
 
-          echo "Directory contents after download:"
+      - name: Verify downloaded files
+        shell: bash
+        run: |
+          echo "Current directory contents after download attempts:"
           ls -la
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Verify checksums
         id: checksum
