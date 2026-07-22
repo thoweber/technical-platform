@@ -295,6 +295,7 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ github.ref_name }}
           draft: true
           prerelease: false
           files: |
