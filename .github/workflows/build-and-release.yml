@@ -363,7 +363,6 @@ jobs:
               gh release create "$TAG" release-files/* \
                 --draft \
                 --title "Technical Platform Release $TAG" \
-                --notes-file release_body.md \
-                --clobber
+                --notes-file release_body.md
             fi
           fi
