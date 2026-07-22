@@ -61,7 +61,7 @@ RUN (groupadd --gid $USER_GID $USERNAME 2>/dev/null || groupmod -n $USERNAME $(g
 # Stage 2: Install development tools and configure custom APT repository
 FROM base AS development
 
-# Install Snap and WSLg support packages in one layer
+# Install Snap, WSLg support, fontconfig, and Noto Sans & Color Emoji fonts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     snapd \
     x11-apps \
@@ -69,6 +69,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-dri \
     libglx-mesa0 \
     libgl1 \
+    fontconfig \
+    fonts-noto-core \
+    fonts-noto-ui-core \
+    fonts-noto-color-emoji \
+    fonts-liberation \
+    && printf '<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n  <alias>\n    <family>sans-serif</family>\n    <prefer>\n      <family>Noto Sans</family>\n      <family>Noto Color Emoji</family>\n    </prefer>\n  </alias>\n  <alias>\n    <family>serif</family>\n    <prefer>\n      <family>Noto Serif</family>\n      <family>Noto Color Emoji</family>\n    </prefer>\n  </alias>\n</fontconfig>\n' > /etc/fonts/local.conf \
+    && fc-cache -f 2>/dev/null || true \
     && systemctl enable snapd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
