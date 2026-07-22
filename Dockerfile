@@ -9,9 +9,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
-# Use Azure Ubuntu mirror for fast downloads on GitHub Actions runners & configure APT retries
-RUN sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \
-    sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true \
+# Use Azure Ubuntu mirror for both archive and security packages for fast downloads on GitHub Actions runners & configure APT retries
+RUN sed -i -E 's/(archive|security)\.ubuntu\.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \
+    sed -i -E 's/(archive|security)\.ubuntu\.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true \
     && mkdir -p /etc/apt/apt.conf.d/ \
     && echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80retry \
     && echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80retry \
@@ -118,6 +118,22 @@ FROM development AS export
 # Switch to root and set systemd as init system
 USER root
 WORKDIR /root
+
+# Restore standard official Ubuntu sources & remove build-specific config for end users
+RUN cat > /etc/apt/sources.list.d/ubuntu.sources <<'EOF'
+Types: deb
+URIs: http://archive.ubuntu.com/ubuntu/
+Suites: noble noble-updates noble-backports
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: http://security.ubuntu.com/ubuntu/
+Suites: noble-security
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+EOF \
+    && rm -f /etc/apt/apt.conf.d/80retry
 
 # Final cleanup to minimize image size
 RUN apt-get autoremove -y \
