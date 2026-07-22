@@ -155,6 +155,7 @@ jobs:
           $global:LASTEXITCODE = 0
 
       - name: Import WSL distribution
+        id: import_wsl
         shell: pwsh
         run: |
           $installPath = "$env:TEMP\WSL-Test\${{ env.TEST_DISTRO_NAME }}"
@@ -171,6 +172,7 @@ jobs:
           wsl --list --verbose
 
       - name: Test - First boot and system check
+        id: first_boot
         shell: pwsh
         run: |
           Write-Host "Testing first boot..."
@@ -184,6 +186,7 @@ jobs:
           wsl -d ${{ env.TEST_DISTRO_NAME }} -- systemctl --version
 
       - name: Test - Repository configuration
+        id: repo_config
         shell: pwsh
         run: |
           Write-Host "Checking repository configuration..."
@@ -201,6 +204,7 @@ jobs:
           wsl -d ${{ env.TEST_DISTRO_NAME }} -- sudo apt-get update
 
       - name: Test - List available tp-* packages
+        id: list_pkgs
         shell: pwsh
         run: |
           Write-Host "Searching for tp-* packages..."
@@ -212,6 +216,7 @@ jobs:
           wsl -d ${{ env.TEST_DISTRO_NAME }} -- apt-cache show tp-docker | grep -E "^Package:|^Version:|^Description:"
 
       - name: Test - Install tp-sdkman-java
+        id: install_java
         shell: pwsh
         timeout-minutes: 15
         run: |
@@ -223,6 +228,7 @@ jobs:
           wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/sdkman.sh && sdk version"
 
       - name: Test - Install tp-nvm-node
+        id: install_node
         shell: pwsh
         timeout-minutes: 15
         run: |
@@ -235,6 +241,7 @@ jobs:
           wsl -d ${{ env.TEST_DISTRO_NAME }} -- bash -c "source /etc/profile.d/nvm.sh && ng version"
 
       - name: Test - Install tp-docker
+        id: install_docker
         shell: pwsh
         timeout-minutes: 10
         run: |
@@ -246,6 +253,7 @@ jobs:
           wsl -d ${{ env.TEST_DISTRO_NAME }} -- docker compose version
 
       - name: Test - Java compilation
+        id: compile_java
         shell: pwsh
         run: |
           Write-Host "Testing Java compilation..."
@@ -258,6 +266,7 @@ jobs:
           "@
 
       - name: Test - Node.js project
+        id: exec_node
         shell: pwsh
         run: |
           Write-Host "Testing Node.js project..."
@@ -272,6 +281,7 @@ jobs:
           "@
 
       - name: Test - Docker functionality
+        id: exec_docker
         shell: pwsh
         timeout-minutes: 5
         run: |
@@ -312,17 +322,18 @@ jobs:
 
           ## Test Results
 
-          | Test | Status |
-          |------|--------|
-          | Checksum Verification | ${{ steps.checksum.outputs.checksum_valid == 'true' && '✅ Passed' || '❌ Failed' }} |
-          | WSL Import | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |
-          | Repository Configuration | ✅ Passed |
-          | tp-sdkman-java Installation | ✅ Passed |
-          | tp-nvm-node Installation | ✅ Passed |
-          | tp-docker Installation | ✅ Passed |
-          | Java Compilation | ✅ Passed |
-          | Node.js Execution | ✅ Passed |
-          | Docker Execution | ✅ Passed |
+          | Test Suite | Status |
+          |------------|--------|
+          | Checksum Verification | ${{ steps.checksum.outcome == 'success' && '✅ Passed' || (steps.checksum.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | WSL Import | ${{ steps.import_wsl.outcome == 'success' && '✅ Passed' || (steps.import_wsl.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | First Boot & System Check | ${{ steps.first_boot.outcome == 'success' && '✅ Passed' || (steps.first_boot.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Repository Configuration | ${{ steps.repo_config.outcome == 'success' && '✅ Passed' || (steps.repo_config.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-sdkman-java Installation | ${{ steps.install_java.outcome == 'success' && '✅ Passed' || (steps.install_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-nvm-node Installation | ${{ steps.install_node.outcome == 'success' && '✅ Passed' || (steps.install_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-docker Installation | ${{ steps.install_docker.outcome == 'success' && '✅ Passed' || (steps.install_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Java Compilation | ${{ steps.compile_java.outcome == 'success' && '✅ Passed' || (steps.compile_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Node.js Execution | ${{ steps.exec_node.outcome == 'success' && '✅ Passed' || (steps.exec_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Docker Execution | ${{ steps.exec_docker.outcome == 'success' && '✅ Passed' || (steps.exec_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
 
           ## Package Versions Tested
 
