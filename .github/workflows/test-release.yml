@@ -1,6 +1,10 @@
 name: End-to-End Release Testing
 
 on:
+  workflow_run:
+    workflows: ["Build WSL Distribution and Publish"]
+    types:
+      - completed
   release:
     types: [created]
   workflow_dispatch:
@@ -32,8 +36,8 @@ jobs:
           } elseif ("${{ github.event.release.tag_name }}" -ne "") {
             $tag = "${{ github.event.release.tag_name }}"
           } else {
-            # Get latest release
-            $releases = gh release list --limit 1 --json tagName | ConvertFrom-Json
+            # Get latest release (including drafts)
+            $releases = gh release list --include-drafts --limit 1 --json tagName | ConvertFrom-Json
             $tag = $releases[0].tagName
           }
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
@@ -392,7 +396,7 @@ jobs:
     name: Publish Release (Quality Gate Passed)
     runs-on: ubuntu-latest
     needs: [test-release-artifacts, test-apt-repository]
-    if: github.event_name == 'release' && success()
+    if: success()
 
     permissions:
       contents: write
@@ -408,8 +412,8 @@ jobs:
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             tag="${{ github.event.release.tag_name }}"
           else
-            # Get latest release
-            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+            # Get latest release (including drafts)
+            tag=$(gh release list --include-drafts --limit 1 --json tagName --jq '.[0].tagName')
           fi
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "Publishing release: $tag"
@@ -480,10 +484,11 @@ jobs:
     name: Notify Quality Gate Failure
     runs-on: ubuntu-latest
     needs: [test-release-artifacts, test-apt-repository]
-    if: github.event_name == 'release' && failure()
+    if: failure()
 
     permissions:
       contents: write
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -496,188 +501,7 @@ jobs:
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             tag="${{ github.event.release.tag_name }}"
           else
-            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-          fi
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "Failed release: $tag"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Update release with failure notice
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tag = '${{ steps.release.outputs.tag }}';
-
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: tag
-            });
-
-            const failureNotice = `
-            ## ❌ Quality Gate: FAILED
-
-            Automated end-to-end tests failed. This release remains in **draft mode** and should not be used.
-
-            **Action Required:**
-            - Review test failures: [Test Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - Fix issues in the code
-            - Delete this draft release
-            - Create a new release with fixes
-
-            ---
-            `;
-
-            const updatedBody = failureNotice + '\n' + release.data.body;
-
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: release.data.id,
-              body: updatedBody,
-              draft: true
-            });
-
-            console.log(`Release ${tag} kept as draft due to test failures.`);
-
-      - name: Create issue for failed release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tag = '${{ steps.release.outputs.tag }}';
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🚨 Quality Gate Failed for Release ${tag}`,
-              body: `## Quality Gate Failure
-
-            Release **${tag}** failed automated testing and was not published.
-
-            ### Failed Tests
-            Check the workflow run for details: [Test Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            ### Action Items
-            - [ ] Review test failures
-            - [ ] Fix identified issues
-            - [ ] Delete draft release ${tag}
-            - [ ] Create new release after fixes
-
-            ### Release Link
-            [Draft Release](https://github.com/${{ github.repository }}/releases/tag/${tag})`,
-              labels: ['quality-gate-failure', 'release']
-            });
-
-  publish-release:
-    name: Publish Release (Quality Gate Passed)
-    runs-on: ubuntu-latest
-    needs: [test-release-artifacts, test-apt-repository]
-    if: github.event_name == 'release' && success()
-
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Determine release tag
-        id: release
-        shell: bash
-        run: |
-          if [ -n "${{ github.event.release.tag_name }}" ]; then
-            tag="${{ github.event.release.tag_name }}"
-          else
-            # Get latest release
-            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-          fi
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "Publishing release: $tag"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Update release body with test results
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tag = '${{ steps.release.outputs.tag }}';
-
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: tag
-            });
-
-            const testBadge = `
-            ## ✅ Quality Gate: PASSED
-
-            All automated end-to-end tests passed successfully:
-
-            | Test Suite | Status |
-            |------------|--------|
-            | Checksum Verification | ✅ Passed |
-            | WSL Import & Boot | ✅ Passed |
-            | Repository Configuration | ✅ Passed |
-            | Package Installations | ✅ Passed |
-            | Java 25 Functionality | ✅ Passed |
-            | Node.js 24 Functionality | ✅ Passed |
-            | Docker CE Functionality | ✅ Passed |
-            | APT Repository Access | ✅ Passed |
-            | GitHub Pages Deployment | ✅ Passed |
-
-            **Test Report:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            ---
-            `;
-
-            // Update release body by prepending test results
-            const updatedBody = testBadge + '\n' + release.data.body;
-
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: release.data.id,
-              body: updatedBody,
-              draft: false
-            });
-
-            console.log(`Release ${tag} has been published!`);
-
-      - name: Post success comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tag = '${{ steps.release.outputs.tag }}';
-
-            await github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body: `🎉 **Release ${tag} Published**\n\nAll quality gate tests passed. The release is now available for download.\n\n[View Release](https://github.com/${{ github.repository }}/releases/tag/${tag})`
-            });
-
-  notify-failure:
-    name: Notify Quality Gate Failure
-    runs-on: ubuntu-latest
-    needs: [test-release-artifacts, test-apt-repository]
-    if: github.event_name == 'release' && failure()
-
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Determine release tag
-        id: release
-        shell: bash
-        run: |
-          if [ -n "${{ github.event.release.tag_name }}" ]; then
-            tag="${{ github.event.release.tag_name }}"
-          else
-            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+            tag=$(gh release list --include-drafts --limit 1 --json tagName --jq '.[0].tagName')
           fi
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "Failed release: $tag"
