@@ -310,9 +310,11 @@ jobs:
         run: |
           echo "Preparing release notes..."
           cat > release_body.md << 'EOF'
+          <!-- DRAFT_NOTICE_START -->
           > **⚠️ This release is in draft mode pending automated quality gate tests.**
           >
           > The release will be automatically published once all E2E tests pass.
+          <!-- DRAFT_NOTICE_END -->
 
 
           ## Technical Platform Ubuntu Distribution Release

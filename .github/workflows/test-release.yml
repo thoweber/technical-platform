@@ -466,7 +466,10 @@ jobs:
             ---
             `;
 
-            let cleanBody = (release.body || '').replace(/>\s*\*\*⚠️ This release is in draft mode[\s\S]*?E2E tests pass\.\*\*\n*/gi, '').trim();
+            let cleanBody = (release.body || '')
+              .replace(/<!-- DRAFT_NOTICE_START -->[\s\S]*?<!-- DRAFT_NOTICE_END -->\s*/gi, '')
+              .replace(/>\s*\*\*⚠️ This release is in draft mode[\s\S]*?E2E tests pass\.\*\*\n*/gi, '')
+              .trim();
 
             const updatedBody = testBadge + '\n\n' + cleanBody;
 
@@ -566,7 +569,10 @@ jobs:
             ---
             `;
 
-            let cleanBody = (release.body || '').replace(/>\s*\*\*⚠️ This release is in draft mode[\s\S]*?E2E tests pass\.\*\*\n*/gi, '').trim();
+            let cleanBody = (release.body || '')
+              .replace(/<!-- DRAFT_NOTICE_START -->[\s\S]*?<!-- DRAFT_NOTICE_END -->\s*/gi, '')
+              .replace(/>\s*\*\*⚠️ This release is in draft mode[\s\S]*?E2E tests pass\.\*\*\n*/gi, '')
+              .trim();
 
             const updatedBody = failureNotice + '\n\n' + cleanBody;
 
