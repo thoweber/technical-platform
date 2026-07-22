@@ -35,10 +35,17 @@ jobs:
             $tag = "${{ github.event.inputs.release_tag }}"
           } elseif ("${{ github.event.release.tag_name }}" -ne "") {
             $tag = "${{ github.event.release.tag_name }}"
+          } elseif ("${{ github.event.workflow_run.head_branch }}" -like "v*") {
+            $tag = "${{ github.event.workflow_run.head_branch }}"
           } else {
-            # Get latest release
-            $releases = gh release list --limit 1 --json tagName | ConvertFrom-Json
-            $tag = $releases[0].tagName
+            $json = gh release list --limit 1 --json tagName
+            $releases = if ($json) { $json | ConvertFrom-Json } else { @() }
+            if ($releases -and $releases.Count -gt 0 -and $releases[0].tagName) {
+              $tag = $releases[0].tagName
+            } else {
+              Write-Host "⚠️ No release found in repository to test. Skipping release artifact download."
+              $tag = ""
+            }
           }
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
           Write-Host "Testing release: $tag"
@@ -46,6 +53,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Download release artifacts
+        if: steps.release.outputs.tag != ''
         shell: pwsh
         run: |
           $tag = "${{ steps.release.outputs.tag }}"
@@ -411,16 +419,24 @@ jobs:
         run: |
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             tag="${{ github.event.release.tag_name }}"
+          elif [[ "${{ github.event.workflow_run.head_branch }}" =~ ^v[0-9] ]]; then
+            tag="${{ github.event.workflow_run.head_branch }}"
           else
-            # Get latest release
-            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty')
           fi
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "Publishing release: $tag"
+
+          if [ -z "$tag" ]; then
+            echo "No release tag found to publish. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$tag" >> $GITHUB_OUTPUT
+            echo "Publishing release: $tag"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Update release body with test results
+        if: steps.release.outputs.skip != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -500,11 +516,19 @@ jobs:
         run: |
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             tag="${{ github.event.release.tag_name }}"
+          elif [[ "${{ github.event.workflow_run.head_branch }}" =~ ^v[0-9] ]]; then
+            tag="${{ github.event.workflow_run.head_branch }}"
           else
-            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty')
           fi
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "Failed release: $tag"
+
+          if [ -z "$tag" ]; then
+            echo "No release tag found. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$tag" >> $GITHUB_OUTPUT
+            echo "Failed release: $tag"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
 
