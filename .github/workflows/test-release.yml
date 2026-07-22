@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 name: End-to-End Release Testing
 
 on:
@@ -73,25 +74,10 @@ jobs:
             Move-Item -Path "wsl-distribution\*" -Destination "." -Force
           }
 
-          # Option 2: Download from GitHub Release API (works for DRAFT releases)
+          # Option 2: Download release assets via gh CLI
           if (-not (Test-Path "${{ env.DISTRIBUTION_NAME }}.wsl")) {
-            Write-Host "Fetching draft release assets via GitHub API for tag $tag..."
-            $releases = gh api "repos/${env:GITHUB_REPOSITORY}/releases" | ConvertFrom-Json
-            $targetRelease = $releases | Where-Object { $_.tag_name -eq $tag } | Select-Object -First 1
-            if (-not $targetRelease) {
-              $targetRelease = $releases | Where-Object { $_.draft -eq $true } | Select-Object -First 1
-            }
-
-            if ($targetRelease -and $targetRelease.assets) {
-              foreach ($asset in $targetRelease.assets) {
-                Write-Host "Downloading asset $($asset.name)..."
-                curl.exe -sSL -H "Authorization: Bearer ${env:GH_TOKEN}" -H "Accept: application/octet-stream" "$($asset.url)" -o "$($asset.name)"
-              }
-            } else {
-              # Option 3: Fallback to standard gh release download
-              gh release download $tag --pattern "${{ env.DISTRIBUTION_NAME }}*" --clobber
-              gh release download $tag --pattern "INSTALL.txt" --clobber
-            }
+            Write-Host "Fetching release assets using gh CLI for tag $tag..."
+            gh release download $tag --dir . --clobber
           }
 
           # Fallback: Auto-generate sha256 file if .wsl exists but sha256 file is missing

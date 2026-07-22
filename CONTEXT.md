@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+
 # Technical Platform Ubuntu Distribution & Ecosystem Architecture
 
 ## 1. Goals & System Architecture

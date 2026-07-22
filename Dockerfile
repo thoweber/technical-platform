@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Multi-stage Dockerfile for Technical Platform Ubuntu Distribution
 # Base: Ubuntu Noble Minimal with systemd, SDKMAN, Node 24 LTS, and custom APT repository
 

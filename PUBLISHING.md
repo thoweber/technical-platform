@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+
 # Publishing Guide
 
 This guide describes the complete publishing process for the Technical Platform Ubuntu Distribution, including all workflow options and manual steps.

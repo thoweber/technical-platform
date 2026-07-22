@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 name: Build WSL Distribution and Publish
 
 on:
@@ -296,46 +297,73 @@ jobs:
           echo "Downloaded release files:"
           ls -la release-files/
 
-      - name: Create Release (as draft)
-        id: create_release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: release-files/*
-          body: |
-            > **⚠️ This release is in draft mode pending automated quality gate tests.**
-            >
-            > The release will be automatically published once all E2E tests pass.
+      - name: Create Release and Upload Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          echo "Preparing release notes..."
+          cat > release_body.md << 'EOF'
+          > **⚠️ This release is in draft mode pending automated quality gate tests.**
+          >
+          > The release will be automatically published once all E2E tests pass.
 
 
-            ## Technical Platform Ubuntu Distribution Release
+          ## Technical Platform Ubuntu Distribution Release
 
-            This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
+          This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
 
-            - ✅ Systemd and WSLg GUI support
-            - ☕ Java 25 (SDKMAN)
-            - 🅰️ Angular CLI (Node 24 LTS)
-            - 🧠 IntelliJ IDEA Ultimate
-              - 🔧 MCP server configured on port 64343
-            - 🚀 Antigravity CLI
-            - 📦 Custom APT repository integration
+          - ✅ Systemd and WSLg GUI support
+          - ☕ Java 25 (SDKMAN)
+          - 🅰️ Angular CLI (Node 24 LTS)
+          - 🧠 IntelliJ IDEA Ultimate
+            - 🔧 MCP server configured on port 64343
+          - 🚀 Antigravity CLI
+          - 📦 Custom APT repository integration
 
-            ### Installation
+          ### Installation
 
-            Download `${{ env.DISTRIBUTION_NAME }}.wsl` and run:
-            ```powershell
-            wsl --import ${{ env.DISTRIBUTION_NAME }} <InstallLocation> ${{ env.DISTRIBUTION_NAME }}.wsl
-            ```
+          Download `${{ env.DISTRIBUTION_NAME }}.wsl` and run:
+          ```powershell
+          wsl --import ${{ env.DISTRIBUTION_NAME }} <InstallLocation> ${{ env.DISTRIBUTION_NAME }}.wsl
+          ```
 
-            See `INSTALL.txt` for detailed instructions.
+          See `INSTALL.txt` for detailed instructions.
 
-            ### APT Repository
+          ### APT Repository
 
-            The distribution includes access to custom packages via:
-            ```
-            https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-            ```
-          generate_release_notes: true
+          The distribution includes access to custom packages via:
+          ```
+          https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          ```
+          EOF
+
+          echo "Verifying files to upload:"
+          ls -la release-files/
+
+          if [ ! -d "release-files" ] || [ -z "$(ls -A release-files/ 2>/dev/null)" ]; then
+            echo "❌ Error: No release files found in release-files/ directory!"
+            exit 1
+          fi
+
+          echo "Uploading release assets for tag $TAG..."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists. Uploading assets..."
+            gh release upload "$TAG" release-files/* --clobber
+            gh release edit "$TAG" --notes-file release_body.md --draft
+          else
+            # Search for draft release via API
+            DRAFT_ID=$(gh api "repos/${{ github.repository }}/releases" --jq ".[] | select(.tag_name == \"$TAG\" or .name == \"$TAG\") | .id")
+            if [ -n "$DRAFT_ID" ]; then
+              echo "Draft release found (ID: $DRAFT_ID). Uploading assets..."
+              gh release upload "$TAG" release-files/* --clobber || gh release upload "$DRAFT_ID" release-files/* --clobber
+              gh release edit "$DRAFT_ID" --notes-file release_body.md --draft
+            else
+              echo "Creating new draft release $TAG with assets..."
+              gh release create "$TAG" release-files/* \
+                --draft \
+                --title "Technical Platform Release $TAG" \
+                --notes-file release_body.md \
+                --clobber
+            fi
+          fi
