@@ -93,8 +93,9 @@ WORKDIR /home/$USERNAME
 
 # Install Antigravity binary
 RUN mkdir -p ~/.local/bin \
-    && curl -fsSL -o ~/.local/bin/antigravity https://github.com/example/antigravity/releases/latest/download/antigravity-linux-amd64 \
-    && chmod +x ~/.local/bin/antigravity || echo "Antigravity binary not available"
+    && echo 'export PATH="/home/$USERNAME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc \
+    && curl -fsSL https://antigravity.google/cli/install.sh | bash \
+    && chmod +x ~/.local/bin/agy || echo "Antigravity binary not available"
 
 # Configure shell environment
 RUN cat >> ~/.bashrc <<'EOF'

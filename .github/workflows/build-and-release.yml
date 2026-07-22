@@ -314,9 +314,9 @@ jobs:
             - ☕ Java 25 (SDKMAN)
             - 🅰️ Angular CLI (Node 24 LTS)
             - 🧠 IntelliJ IDEA Ultimate
-            - 🚀 Antigravity tool
+              - 🔧 MCP server configured on port 64343
+            - 🚀 Antigravity CLI
             - 📦 Custom APT repository integration
-            - 🔧 MCP server configured on port 64343
 
             ### Installation
 
