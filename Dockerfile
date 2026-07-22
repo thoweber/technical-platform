@@ -119,24 +119,10 @@ FROM development AS export
 USER root
 WORKDIR /root
 
-# Restore standard official Ubuntu sources & remove build-specific config for end users
-RUN cat > /etc/apt/sources.list.d/ubuntu.sources <<'EOF'
-Types: deb
-URIs: http://archive.ubuntu.com/ubuntu/
-Suites: noble noble-updates noble-backports
-Components: main restricted universe multiverse
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-
-Types: deb
-URIs: http://security.ubuntu.com/ubuntu/
-Suites: noble-security
-Components: main restricted universe multiverse
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-EOF \
-    && rm -f /etc/apt/apt.conf.d/80retry
-
-# Final cleanup to minimize image size
-RUN apt-get autoremove -y \
+# Restore standard official Ubuntu sources, remove build configs, and perform final cleanup in a single layer
+RUN printf 'Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: noble noble-updates noble-backports\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' > /etc/apt/sources.list.d/ubuntu.sources \
+    && rm -f /etc/apt/apt.conf.d/80retry \
+    && apt-get autoremove -y \
     && apt-get autoclean -y \
     && rm -rf /var/lib/apt/lists/* \
     /tmp/* \
