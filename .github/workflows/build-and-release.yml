@@ -145,6 +145,9 @@ jobs:
         run: |
           mkdir -p gh-pages
 
+          # Prevent GitHub Pages Jekyll processing from ignoring dists/ files
+          touch gh-pages/.nojekyll
+
           # Copy repository structure (only if directories exist)
           if [ -d "${{ env.REPREPRO_DIR }}/dists" ]; then
             cp -r ${{ env.REPREPRO_DIR }}/dists gh-pages/

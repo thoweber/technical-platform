@@ -195,7 +195,20 @@ jobs:
           echo "Checking repository configuration..."
           docker run --rm tp-wsl-test:latest cat /etc/apt/sources.list.d/technical-platform.list || true
           docker run --rm tp-wsl-test:latest cat /etc/apt/sources.list.d/docker.list || true
-          docker run --rm tp-wsl-test:latest apt-get update
+          
+          # Retry apt-get update to allow GitHub Pages CDN deployment propagation
+          docker run --rm tp-wsl-test:latest bash -c '
+            for i in {1..10}; do
+              echo "Attempt $i: Updating package lists..."
+              if apt-get update; then
+                echo "APT update succeeded!"
+                exit 0
+              fi
+              echo "GitHub Pages CDN propagation in progress... waiting 10s"
+              sleep 10
+            done
+            exit 1
+          '
 
       - name: Test - List available tp-* packages
         id: list_pkgs
@@ -324,12 +337,20 @@ jobs:
         run: |
           echo "Testing repository installation in Docker container..."
 
-          docker run --rm ubuntu:noble bash -c "
-            echo 'deb [trusted=yes] https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} noble main' > /etc/apt/sources.list.d/technical-platform.list
-            apt-get update
-            apt-cache search tp- | grep '^tp-'
-            echo 'Repository test completed successfully'
-          "
+          docker run --rm ubuntu:noble bash -c '
+            echo "deb [trusted=yes] https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} noble main" > /etc/apt/sources.list.d/technical-platform.list
+            for i in {1..10}; do
+              echo "Attempt $i: Updating package lists..."
+              if apt-get update; then
+                apt-cache search tp- | grep "^tp-" || true
+                echo "Repository test completed successfully"
+                exit 0
+              fi
+              echo "GitHub Pages CDN propagation in progress... waiting 10s"
+              sleep 10
+            done
+            exit 1
+          '
 
       - name: Generate APT repository report
         if: always()
