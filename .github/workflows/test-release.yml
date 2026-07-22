@@ -151,7 +151,8 @@ jobs:
         run: |
           Write-Host "Checking WSL installation..."
           wsl --version
-          wsl --list --verbose
+          wsl --list --verbose 2>&1 | Out-Host
+          $global:LASTEXITCODE = 0
 
       - name: Import WSL distribution
         shell: pwsh
@@ -161,6 +162,7 @@ jobs:
 
           # Cleanup any existing test distribution
           wsl --unregister ${{ env.TEST_DISTRO_NAME }} 2>$null
+          $global:LASTEXITCODE = 0
 
           # Import the distribution
           wsl --import ${{ env.TEST_DISTRO_NAME }} $installPath "${{ env.DISTRIBUTION_NAME }}.wsl"
