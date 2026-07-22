@@ -36,8 +36,8 @@ jobs:
           } elseif ("${{ github.event.release.tag_name }}" -ne "") {
             $tag = "${{ github.event.release.tag_name }}"
           } else {
-            # Get latest release (including drafts)
-            $releases = gh release list --include-drafts --limit 1 --json tagName | ConvertFrom-Json
+            # Get latest release
+            $releases = gh release list --limit 1 --json tagName | ConvertFrom-Json
             $tag = $releases[0].tagName
           }
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
@@ -412,8 +412,8 @@ jobs:
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             tag="${{ github.event.release.tag_name }}"
           else
-            # Get latest release (including drafts)
-            tag=$(gh release list --include-drafts --limit 1 --json tagName --jq '.[0].tagName')
+            # Get latest release
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           fi
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "Publishing release: $tag"
@@ -501,7 +501,7 @@ jobs:
           if [ -n "${{ github.event.release.tag_name }}" ]; then
             tag="${{ github.event.release.tag_name }}"
           else
-            tag=$(gh release list --include-drafts --limit 1 --json tagName --jq '.[0].tagName')
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           fi
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "Failed release: $tag"
