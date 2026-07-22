@@ -193,11 +193,14 @@ jobs:
 
       - name: Build Docker image
         run: |
-          # Build with custom APT repository URL
-          docker build \
+          # Build with custom APT repository URL and GHA layer cache
+          docker buildx build \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --build-arg APT_REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" \
             --tag ${{ env.DOCKER_IMAGE_NAME }}:latest \
             --file Dockerfile \
+            --load \
             .
 
       - name: Export Docker rootfs to tar.gz

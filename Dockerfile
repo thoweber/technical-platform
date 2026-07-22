@@ -9,10 +9,16 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
+# Use Azure Ubuntu mirror for fast downloads on GitHub Actions runners & configure APT retries
+RUN sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \
+    sed -i 's/archive.ubuntu.com/azure.archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true \
+    && mkdir -p /etc/apt/apt.conf.d/ \
+    && echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80retry \
+    && echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80retry \
+    && echo 'Acquire::ftp::Timeout "30";' >> /etc/apt/apt.conf.d/80retry
+
 # Set up systemd and basic utilities in a single layer
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     systemd \
     systemd-sysv \
     dbus \
@@ -55,9 +61,7 @@ RUN (groupadd --gid $USER_GID $USERNAME 2>/dev/null || groupmod -n $USERNAME $(g
 FROM base AS development
 
 # Install Snap and WSLg support packages in one layer
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     snapd \
     x11-apps \
     mesa-utils \
@@ -69,10 +73,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Add Docker CE official repository
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    install -m 0755 -d /etc/apt/keyrings \
-    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL --connect-timeout 10 --max-time 30 https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
     && chmod a+r /etc/apt/keyrings/docker.asc \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get update
@@ -93,9 +95,9 @@ WORKDIR /home/$USERNAME
 
 # Install Antigravity binary
 RUN mkdir -p ~/.local/bin \
-    && echo 'export PATH="/home/$USERNAME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc \
-    && curl -fsSL https://antigravity.google/cli/install.sh | bash \
-    && chmod +x ~/.local/bin/agy || echo "Antigravity binary not available"
+    && echo 'export PATH="/home/$USERNAME/.local/bin:$PATH"' >> ~/.bashrc \
+    && (curl -fsSL --connect-timeout 10 --max-time 30 https://antigravity.google/cli/install.sh | bash || echo "Antigravity binary not available") \
+    && (chmod +x ~/.local/bin/agy 2>/dev/null || true)
 
 # Configure shell environment
 RUN cat >> ~/.bashrc <<'EOF'
