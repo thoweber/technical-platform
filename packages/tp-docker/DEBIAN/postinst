@@ -17,14 +17,8 @@ if ! command -v docker > /dev/null 2>&1; then
     curl -fsSL --connect-timeout 10 --max-time 30 https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc 2>/dev/null || true
     chmod a+r /etc/apt/keyrings/docker.asc 2>/dev/null || true
 
-    # Fallback resolute to noble since download.docker.com publishes LTS releases
-    CODENAME=$(. /etc/os-release 2>/dev/null && echo "$VERSION_CODENAME")
-    if [ "$CODENAME" = "resolute" ] || [ -z "$CODENAME" ]; then
-        CODENAME="noble"
-    fi
-
     if [ -f /etc/apt/keyrings/docker.asc ]; then
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $CODENAME stable" > /etc/apt/sources.list.d/docker.list
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
         apt-get update >/dev/null 2>&1 || true
     fi
 
@@ -43,7 +37,7 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     echo "Adding user '$ACTUAL_USER' to docker group..."
     usermod -aG docker "$ACTUAL_USER" 2>/dev/null || true
 
-    # Grant POSIX ACL on /var/run/docker.sock if setfacl is available
+    # Grant POSIX ACL on /var/run/docker.sock for immediate sudo-less execution in current shell
     if [ -e /var/run/docker.sock ] && command -v setfacl >/dev/null 2>&1; then
         echo "Setting socket ACL for immediate execution..."
         setfacl -m u:"$ACTUAL_USER":rw /var/run/docker.sock 2>/dev/null || true
