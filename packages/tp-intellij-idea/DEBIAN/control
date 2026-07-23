@@ -1,9 +1,9 @@
 Package: tp-intellij-idea
-Version: 1.0.0
+Version: 1.0.1
 Section: devel
 Priority: optional
 Architecture: all
-Depends: snapd
+Depends: snapd, libxtst6, libxrender1, libxi6, libxrandr2, libxcursor1, libxinerama1
 Maintainer: Technical Platform <noreply@example.com>
 Description: IntelliJ IDEA Ultimate installation for Technical Platform WSL
  This package installs IntelliJ IDEA Ultimate via snapd and configures
