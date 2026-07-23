@@ -210,7 +210,7 @@ jobs:
         shell: bash
         run: |
           echo "Searching for tp-* packages..."
-          docker run --rm tp-wsl-test:latest bash -c 'apt-cache search tp- | grep "^tp-"'
+          docker run --rm tp-wsl-test:latest bash -c 'apt-get update >/dev/null 2>&1 && apt-cache search tp-'
 
       - name: Test - Java 25, SDKMAN & HelloWorld Compilation (tp-sdkman-java)
         id: compile_java
