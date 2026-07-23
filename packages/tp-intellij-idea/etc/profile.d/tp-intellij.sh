@@ -1,11 +1,17 @@
 #!/bin/bash
 # Auto-configure IntelliJ IDEA MCP server port to 64343 and Noto Color Emoji fallback font on user login
 if [ -n "$HOME" ] && [ -d "$HOME" ]; then
-    JB_BASE_DIRS=(
-        "$HOME/.config/JetBrains"
-        "$HOME/snap/intellij-idea-ultimate/current/.config/JetBrains"
-        "$HOME/snap/intellij-idea-ultimate/common/.config/JetBrains"
-    )
+    # Fix broken snap directory if 'current' was created as a regular directory instead of a symlink
+    if [ -d "$HOME/snap/intellij-idea-ultimate/current" ] && [ ! -L "$HOME/snap/intellij-idea-ultimate/current" ]; then
+        rm -rf "$HOME/snap/intellij-idea-ultimate/current" 2>/dev/null || true
+    fi
+
+    JB_BASE_DIRS=("$HOME/.config/JetBrains")
+    
+    # Safely check snap directories only if they already exist without breaking snap symlinks
+    if [ -d "$HOME/snap/intellij-idea-ultimate/common/.config/JetBrains" ]; then
+        JB_BASE_DIRS+=("$HOME/snap/intellij-idea-ultimate/common/.config/JetBrains")
+    fi
 
     for jb_base in "${JB_BASE_DIRS[@]}"; do
         mkdir -p "$jb_base"
