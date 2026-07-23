@@ -19,8 +19,18 @@ echo "Verified: tp-intellij-agy-interop is not installed when only Antigravity C
 echo "Installing tp-intellij-idea (should trigger APT Post-Invoke hook to auto-install interop)..."
 apt-get install -y tp-intellij-idea
 
-# Step 3: Verify tp-intellij-agy-interop WAS auto-installed
-if ! dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q "ok installed"; then
+# Step 3: Wait for tp-intellij-agy-interop to be auto-installed by background Post-Invoke hook
+echo "Waiting for APT Post-Invoke hook to auto-install tp-intellij-agy-interop..."
+INSTALLED=false
+for i in {1..15}; do
+    if dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q "ok installed"; then
+        INSTALLED=true
+        break
+    fi
+    sleep 1
+done
+
+if [ "$INSTALLED" != "true" ]; then
     echo "Error: tp-intellij-agy-interop was NOT auto-installed after installing both tools!"
     exit 1
 fi
