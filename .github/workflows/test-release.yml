@@ -267,20 +267,23 @@ EOF
             echo "✅ Node.js execution passed!"
           '
 
-      - name: Test - tp-docker Installation & CLI
+      - name: Test - tp-docker Sudo-less Execution
         id: exec_docker
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing tp-docker and verifying CLI..."
+          echo "Installing tp-docker and verifying immediate non-root sudo-less execution..."
           docker run --rm tp-wsl-test:latest bash -c '
             set -e
             apt-get update
             apt-get install -y tp-docker
             docker --version
-            docker compose version
-            docker buildx version
-            echo "✅ tp-docker CLI functionality passed!"
+            
+            # Verify immediate non-root execution without sudo as developer user
+            echo "Testing non-root execution as developer user..."
+            su - developer -c "docker --version && docker compose version && docker buildx version"
+            
+            echo "✅ Immediate sudo-less docker execution passed!"
           '
 
       - name: Test - tp-antigravity-cli Installation
