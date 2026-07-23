@@ -191,8 +191,7 @@ jobs:
         shell: bash
         run: |
           echo "Checking repository configuration..."
-          docker run --rm tp-wsl-test:latest cat /etc/apt/sources.list.d/technical-platform.list || true
-          docker run --rm tp-wsl-test:latest cat /etc/apt/sources.list.d/docker.list || true
+          docker run --rm tp-wsl-test:latest cat /etc/apt/sources.list.d/technical-platform.list
           
           # Retry apt-get update to allow GitHub Pages CDN deployment propagation
           docker run --rm tp-wsl-test:latest bash -c '
@@ -213,52 +212,106 @@ jobs:
         shell: bash
         run: |
           echo "Searching for tp-* packages..."
-          docker run --rm tp-wsl-test:latest apt-cache search tp- || true
+          docker run --rm tp-wsl-test:latest bash -c 'apt-cache search tp- | grep "^tp-"'
 
-      - name: Test - Install tp-sdkman-java
-        id: install_java
+      - name: Test - Java HelloWorld Compilation & Execution (tp-sdkman-java)
+        id: compile_java
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-sdkman-java..."
-          docker run --rm tp-wsl-test:latest bash -c "apt-get update && apt-get install -y tp-sdkman-java" || echo "Package test completed"
+          echo "Installing tp-sdkman-java and compiling/running HelloWorld.java..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            apt-get update
+            apt-get install -y tp-sdkman-java
+            source /etc/profile
+            mkdir -p /tmp/java-test && cd /tmp/java-test
+            cat > HelloWorld.java << "EOF"
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}
+EOF
+            javac HelloWorld.java
+            output=$(java HelloWorld)
+            echo "Java Execution Output: $output"
+            if [ "$output" != "Hello, World!" ]; then
+              echo "Java output mismatch!"
+              exit 1
+            fi
+            echo "✅ Java compilation and execution passed!"
+          '
 
-      - name: Test - Install tp-nvm-node
-        id: install_node
+      - name: Test - Node.js HelloWorld Execution (tp-nvm-node)
+        id: exec_node
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-nvm-node..."
-          docker run --rm tp-wsl-test:latest bash -c "apt-get update && apt-get install -y tp-nvm-node" || echo "Package test completed"
+          echo "Installing tp-nvm-node and running helloworld.js..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            apt-get update
+            apt-get install -y tp-nvm-node
+            source /etc/profile
+            mkdir -p /tmp/node-test && cd /tmp/node-test
+            cat > helloworld.js << "EOF"
+console.log("Hello, World!");
+EOF
+            output=$(node helloworld.js)
+            echo "Node Execution Output: $output"
+            if [ "$output" != "Hello, World!" ]; then
+              echo "Node.js output mismatch!"
+              exit 1
+            fi
+            echo "✅ Node.js execution passed!"
+          '
 
-      - name: Test - Install tp-docker
-        id: install_docker
+      - name: Test - tp-docker Installation & CLI
+        id: exec_docker
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing tp-docker..."
-          docker run --rm tp-wsl-test:latest bash -c "apt-get update && apt-get install -y tp-docker" || echo "Package test completed"
+          echo "Installing tp-docker and verifying CLI..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            apt-get update
+            apt-get install -y tp-docker
+            docker --version
+            docker compose version
+            docker buildx version
+            echo "✅ tp-docker CLI functionality passed!"
+          '
 
-      - name: Test - Java compilation
-        id: compile_java
+      - name: Test - tp-antigravity-cli Installation
+        id: install_antigravity
+        timeout-minutes: 10
         shell: bash
         run: |
-          echo "Testing Java..."
-          docker run --rm tp-wsl-test:latest bash -c "java -version 2>/dev/null || echo 'Java test completed'"
+          echo "Installing tp-antigravity-cli..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            apt-get update
+            apt-get install -y tp-antigravity-cli
+            source /etc/profile
+            test -f /usr/local/bin/agy
+            echo "✅ tp-antigravity-cli installation passed!"
+          '
 
-      - name: Test - Node.js project
-        id: exec_node
+      - name: Test - tp-intellij-idea & Interop Installation
+        id: install_intellij
+        timeout-minutes: 10
         shell: bash
         run: |
-          echo "Testing Node.js..."
-          docker run --rm tp-wsl-test:latest bash -c "node --version 2>/dev/null || echo 'Node test completed'"
-
-      - name: Test - Docker functionality
-        id: exec_docker
-        shell: bash
-        run: |
-          echo "Testing Docker CLI..."
-          docker run --rm tp-wsl-test:latest docker --version || true
+          echo "Installing tp-intellij-idea and tp-intellij-agy-interop..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            apt-get update
+            apt-get install -y tp-intellij-idea tp-intellij-agy-interop
+            test -f /etc/profile.d/tp-intellij.sh
+            test -f /etc/profile.d/tp-intellij-agy-interop.sh
+            echo "✅ IntelliJ IDEA & Interop package installation passed!"
+          '
 
       - name: Generate test report
         if: always()
@@ -279,12 +332,11 @@ jobs:
           | RootFS Import (Docker) | ${{ steps.import_wsl.outcome == 'success' && '✅ Passed' || (steps.import_wsl.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | First Boot & System Check | ${{ steps.first_boot.outcome == 'success' && '✅ Passed' || (steps.first_boot.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | Repository Configuration | ${{ steps.repo_config.outcome == 'success' && '✅ Passed' || (steps.repo_config.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | tp-sdkman-java Installation | ${{ steps.install_java.outcome == 'success' && '✅ Passed' || (steps.install_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | tp-nvm-node Installation | ${{ steps.install_node.outcome == 'success' && '✅ Passed' || (steps.install_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | tp-docker Installation | ${{ steps.install_docker.outcome == 'success' && '✅ Passed' || (steps.install_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | Java Compilation | ${{ steps.compile_java.outcome == 'success' && '✅ Passed' || (steps.compile_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | Node.js Execution | ${{ steps.exec_node.outcome == 'success' && '✅ Passed' || (steps.exec_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | Docker Execution | ${{ steps.exec_docker.outcome == 'success' && '✅ Passed' || (steps.exec_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Java 25 & HelloWorld Compilation | ${{ steps.compile_java.outcome == 'success' && '✅ Passed' || (steps.compile_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Node.js 24 & HelloWorld Execution | ${{ steps.exec_node.outcome == 'success' && '✅ Passed' || (steps.exec_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-docker Functionality | ${{ steps.exec_docker.outcome == 'success' && '✅ Passed' || (steps.exec_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-antigravity-cli Functionality | ${{ steps.install_antigravity.outcome == 'success' && '✅ Passed' || (steps.install_antigravity.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-intellij-idea & Interop Packages | ${{ steps.install_intellij.outcome == 'success' && '✅ Passed' || (steps.install_intellij.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
 
           ## Package Versions Tested
 
@@ -292,6 +344,7 @@ jobs:
           - Node.js 24 LTS
           - Docker CE (latest)
           - Angular CLI (latest)
+          - Antigravity CLI
 
           EOF
           cat test-report.md
