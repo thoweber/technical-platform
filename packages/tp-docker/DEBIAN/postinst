@@ -27,11 +27,17 @@ else
     echo "Please run manually: sudo usermod -aG docker \$USER"
 fi
 
-# Enable and start Docker service if systemd is available
-if command -v systemctl > /dev/null 2>&1; then
-    echo "Enabling Docker service..."
-    systemctl enable docker
-    systemctl start docker || echo "Note: Docker service will start on next boot"
+# Enable and start Docker service if systemd is active, or configure for next boot
+if [ -d /run/systemd/system ]; then
+    echo "Enabling and starting Docker service via systemd..."
+    systemctl enable docker 2>/dev/null || true
+    systemctl start docker 2>/dev/null || echo "Note: Docker service will start on next boot"
+else
+    echo "System is not currently running systemd (PID 1)."
+    echo "Enabling Docker service for systemd boot..."
+    mkdir -p /etc/systemd/system/multi-user.target.wants
+    ln -sf /lib/systemd/system/docker.service /etc/systemd/system/multi-user.target.wants/docker.service 2>/dev/null || true
+    update-rc.d docker enable 2>/dev/null || true
 fi
 
 echo ""

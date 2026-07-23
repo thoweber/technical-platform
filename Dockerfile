@@ -35,18 +35,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Configure systemd for WSL2
-RUN cd /lib/systemd/system/sysinit.target.wants/ && \
-    ls | grep -v systemd-tmpfiles-setup | xargs rm -f $1 && \
-    rm -f /lib/systemd/system/multi-user.target.wants/* \
-    /etc/systemd/system/*.wants/* \
-    /lib/systemd/system/local-fs.target.wants/* \
-    /lib/systemd/system/sockets.target.wants/*udev* \
-    /lib/systemd/system/sockets.target.wants/*initctl* \
-    /lib/systemd/system/basic.target.wants/* \
-    /lib/systemd/system/anaconda.target.wants/* \
-    /lib/systemd/system/plymouth* \
-    /lib/systemd/system/systemd-update-utmp*
+# Configure WSL2 settings with systemd enabled as init system
+RUN cat > /etc/wsl.conf <<'EOF'
+[boot]
+systemd=true
+
+[user]
+default=developer
+
+[interop]
+enabled=true
+appendWindowsPath=false
+EOF
 
 # Create default user
 ARG USERNAME=developer
