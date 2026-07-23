@@ -94,12 +94,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN install -m 0755 -d /etc/apt/keyrings \
     && curl -fsSL --connect-timeout 10 --max-time 30 https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
     && chmod a+r /etc/apt/keyrings/docker.asc \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list \
+    && CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME") \
+    && if [ "$CODENAME" = "resolute" ]; then CODENAME="noble"; fi \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $CODENAME stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get update
 
 # Set up custom APT repository configuration
 ARG APT_REPO_URL="https://thoweber.github.io/technical-platform"
-RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.d/technical-platform.list
+RUN echo "deb [trusted=yes] ${APT_REPO_URL} ./ " > /etc/apt/sources.list.d/technical-platform.list
 
 # Note: Development tools are available as optional tp-* packages:
 # - tp-sdkman-java: Installs SDKMAN with Java 25
@@ -123,7 +125,8 @@ USER root
 WORKDIR /root
 
 # Restore standard official Ubuntu sources, remove build configs, and perform final cleanup in a single layer
-RUN printf 'Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: noble noble-updates noble-backports\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' > /etc/apt/sources.list.d/ubuntu.sources \
+RUN CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME") \
+    && printf "Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: ${CODENAME} ${CODENAME}-updates ${CODENAME}-backports\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: ${CODENAME}-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n" > /etc/apt/sources.list.d/ubuntu.sources \
     && rm -f /etc/apt/apt.conf.d/80retry \
     && apt-get autoremove -y \
     && apt-get autoclean -y \
