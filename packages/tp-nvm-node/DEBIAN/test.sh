@@ -24,4 +24,15 @@ if [ "$output" != "Hello, World!" ]; then
 fi
 EOF
 
-echo "✅ Node.js 24 & NVM execution passed!"
+# Test package uninstallation teardown
+echo "Testing tp-nvm-node removal and teardown..."
+apt-get remove -y tp-nvm-node
+if [ -d "/opt/nvm" ] || [ -f "/etc/profile.d/nvm.sh" ]; then
+    echo "Error: /opt/nvm or nvm.sh was not completely removed on apt-get remove!"
+    exit 1
+fi
+echo "Verified: /opt/nvm and all managed Node versions were cleanly removed."
+
+# Reinstall for subsequent package tests in pipeline
+apt-get install -y tp-nvm-node
+echo "✅ Node.js 24 & NVM compilation, execution, and uninstallation teardown passed!"

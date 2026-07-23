@@ -8,21 +8,24 @@ if [ ! -d "$NVM_DIR" ]; then
     echo "Installing NVM to $NVM_DIR..."
     mkdir -p "$NVM_DIR"
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | NVM_DIR="$NVM_DIR" bash
+fi
 
-    # Source NVM and install Node 24 LTS
-    export NVM_DIR="/opt/nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+# Source NVM
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    \. "$NVM_DIR/nvm.sh"
 
-    nvm install 24
-    nvm use 24
-    nvm alias default 24
-
-    # Cleanup npm cache to reduce size
-    npm cache clean --force
-
-    echo "NVM and Node 24 LTS installed successfully"
-else
-    echo "NVM already installed at $NVM_DIR"
+    # Only install Node 24 LTS if no Node version is installed in NVM
+    HAS_NODE=$(find "$NVM_DIR/versions/node" -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1)
+    if [ -z "$HAS_NODE" ]; then
+        echo "No existing Node.js version found in NVM. Installing Node 24 LTS..."
+        nvm install 24
+        nvm use 24
+        nvm alias default 24
+        npm cache clean --force 2>/dev/null || true
+        echo "NVM and Node 24 LTS installed successfully."
+    else
+        echo "Existing Node.js version detected in NVM ($HAS_NODE). Skipping Node 24 installation."
+    fi
 fi
 
 exit 0
