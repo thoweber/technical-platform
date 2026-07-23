@@ -123,13 +123,31 @@ intellij-idea-ultimate &
 
 ---
 
+### tp-antigravity-cli
+**Antigravity CLI Binary**
+
+Installs the Antigravity CLI binary (`agy`) system-wide in `/opt/antigravity` and configures environment PATH.
+
+**Installation:**
+```bash
+sudo apt-get update
+sudo apt-get install tp-antigravity-cli
+```
+
+**Usage:**
+```bash
+agy --version
+```
+
+---
+
 ## Installing Complete Development Environment
 
-To install everything (Java, Node, Docker, and IntelliJ IDEA):
+To install everything (Java, Node, Docker, IntelliJ IDEA, and Antigravity CLI):
 
 ```bash
 sudo apt-get update
-sudo apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea
+sudo apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli
 ```
 
 After installation, restart your shell or run:

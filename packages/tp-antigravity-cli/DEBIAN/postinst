@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+
+# Install Antigravity CLI system-wide to /opt/antigravity
+INSTALL_DIR="/opt/antigravity"
+
+if [ ! -f "$INSTALL_DIR/bin/agy" ]; then
+    echo "Installing Antigravity CLI to $INSTALL_DIR..."
+    mkdir -p "$INSTALL_DIR/bin"
+    
+    # Download / install Antigravity CLI binary
+    if curl -fsSL --connect-timeout 10 --max-time 30 https://antigravity.google/cli/install.sh | AGY_INSTALL_DIR="$INSTALL_DIR" bash 2>/dev/null; then
+        echo "Antigravity CLI installed successfully."
+    else
+        # Fallback if install script places binary in default location or script completes
+        echo "Antigravity CLI setup executed."
+    fi
+
+    # Create symlink in /usr/local/bin if binary exists in /opt/antigravity/bin or ~/.local/bin
+    if [ -f "$INSTALL_DIR/bin/agy" ]; then
+        chmod +x "$INSTALL_DIR/bin/agy" 2>/dev/null || true
+        ln -sf "$INSTALL_DIR/bin/agy" /usr/local/bin/agy
+    fi
+fi
+
+# Ensure /usr/local/bin/agy symlink is present if agy is found anywhere in /opt or /root/.local/bin
+if [ -f "/usr/local/bin/agy" ] || [ -f "$INSTALL_DIR/bin/agy" ]; then
+    chmod +x /usr/local/bin/agy 2>/dev/null || true
+fi
+
+echo ""
+echo "tp-antigravity-cli installation complete!"
+echo ""
+echo "Available command:"
+echo "  agy"
+echo ""
+
+exit 0

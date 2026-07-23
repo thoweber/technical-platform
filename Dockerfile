@@ -106,17 +106,12 @@ RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.
 # - tp-nvm-node: Installs NVM with Node 24 LTS and Angular CLI
 # - tp-docker: Installs Docker CE complete suite and adds user to docker group
 # - tp-intellij-idea: Installs IntelliJ IDEA Ultimate via snap
-# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea
+# - tp-antigravity-cli: Installs Antigravity CLI binary (agy)
+# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli
 
 # Switch to user for configuration
 USER $USERNAME
 WORKDIR /home/$USERNAME
-
-# Install Antigravity binary
-RUN mkdir -p ~/.local/bin \
-    && echo 'export PATH="/home/$USERNAME/.local/bin:$PATH"' >> ~/.bashrc \
-    && (curl -fsSL --connect-timeout 10 --max-time 30 https://antigravity.google/cli/install.sh | bash || echo "Antigravity binary not available") \
-    && (chmod +x ~/.local/bin/agy 2>/dev/null || true)
 
 # Configure shell environment
 RUN cat >> ~/.bashrc <<'EOF'

@@ -1,0 +1,10 @@
+Package: tp-antigravity-cli
+Version: 1.0.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends: curl, ca-certificates, git
+Maintainer: Technical Platform <noreply@example.com>
+Description: Antigravity CLI installation for Technical Platform WSL
+ This package installs the Antigravity CLI binary (agy) system-wide
+ in /opt/antigravity and configures environment PATH.
