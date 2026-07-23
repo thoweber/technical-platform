@@ -20,6 +20,7 @@ RUN sed -i -E 's/(archive|security)\.ubuntu\.com/azure.archive.ubuntu.com/g' /et
 
 # Set up systemd and basic utilities in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils \
     systemd \
     systemd-sysv \
     dbus \
