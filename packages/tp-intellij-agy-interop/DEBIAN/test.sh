@@ -28,8 +28,8 @@ echo "Verifying interop configuration generated synchronously..."
 test -f /etc/profile.d/tp-intellij-agy-interop.sh
 
 su - developer << 'EOF'
+source /etc/profile 2>/dev/null || true
 set -e
-source /etc/profile
 
 mcp_file="$HOME/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml"
 test -f "$mcp_file"
