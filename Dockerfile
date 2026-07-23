@@ -18,9 +18,12 @@ RUN sed -i -E 's/(archive|security)\.ubuntu\.com/azure.archive.ubuntu.com/g' /et
     && echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80retry \
     && echo 'Acquire::ftp::Timeout "30";' >> /etc/apt/apt.conf.d/80retry
 
-# Set up systemd and basic utilities in a single layer
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Set up debconf non-interactive defaults and basic utilities in a single layer
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
+    && echo 'DEBIAN_FRONTEND=noninteractive' >> /etc/environment \
+    && apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
+    dialog \
     systemd \
     systemd-sysv \
     dbus \
