@@ -23,85 +23,68 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
         echo "Configuring IntelliJ IDEA settings for '$ACTUAL_USER'..."
         
-        # Clean up broken snap directory if 'current' was created as a regular directory instead of a symlink
-        if [ -d "$USER_HOME/snap/intellij-idea-ultimate/current" ] && [ ! -L "$USER_HOME/snap/intellij-idea-ultimate/current" ]; then
-            rm -rf "$USER_HOME/snap/intellij-idea-ultimate/current" 2>/dev/null || true
+        JB_DIR="$USER_HOME/.config/JetBrains"
+        mkdir -p "$JB_DIR"
+
+        shopt -s nullglob
+        IDEA_DIRS=("$JB_DIR"/IntelliJIdea* "$JB_DIR"/IdeaIC*)
+        shopt -u nullglob
+
+        if [ ${#IDEA_DIRS[@]} -eq 0 ]; then
+            IDEA_DIRS=("$JB_DIR/IntelliJIdea2026.2")
         fi
 
-        JB_BASE_DIRS=("$USER_HOME/.config/JetBrains")
-        
-        if [ -d "$USER_HOME/snap/intellij-idea-ultimate/common/.config/JetBrains" ]; then
-            JB_BASE_DIRS+=("$USER_HOME/snap/intellij-idea-ultimate/common/.config/JetBrains")
-        fi
+        for idea_dir in "${IDEA_DIRS[@]}"; do
+            opts_dir="$idea_dir/options"
+            mkdir -p "$opts_dir"
 
-        for jb_base in "${JB_BASE_DIRS[@]}"; do
-            mkdir -p "$jb_base"
-            
-            # Clean up empty dummy version directories created previously that trigger JetBrains migration freezes
-            shopt -s nullglob
-            for dummy_dir in "$jb_base"/IntelliJIdea2024.1 "$jb_base"/IntelliJIdea2024.2 "$jb_base"/IntelliJIdea2025.1; do
-                if [ -d "$dummy_dir" ]; then
-                    file_cnt=$(find "$dummy_dir" -type f 2>/dev/null | wc -l)
-                    if [ "$file_cnt" -le 4 ]; then
-                        rm -rf "$dummy_dir" 2>/dev/null || true
-                    fi
-                fi
-            done
-
-            IDEA_DIRS=("$jb_base"/IntelliJIdea* "$jb_base"/IdeaIC*)
-            shopt -u nullglob
-
-            # If no real JetBrains directory exists yet, target a single default version directory
-            if [ ${#IDEA_DIRS[@]} -eq 0 ]; then
-                IDEA_DIRS=("$jb_base/IntelliJIdea2024.3")
-            fi
-
-            for idea_dir in "${IDEA_DIRS[@]}"; do
-                opts_dir="$idea_dir/options"
-                mkdir -p "$opts_dir"
-
-                # 1. MCP Server port 64343 in mcpServer.xml
-                mcp_file="$opts_dir/mcpServer.xml"
-                if [ ! -f "$mcp_file" ]; then
-                    cat > "$mcp_file" << 'EOF'
+            # 1. Configure MCP Server in mcpServer.xml (Component: McpServerSettings)
+            mcp_file="$opts_dir/mcpServer.xml"
+            if [ ! -f "$mcp_file" ]; then
+                cat > "$mcp_file" << 'EOF'
 <application>
-  <component name="McpServerOptions">
+  <component name="McpServerSettings">
+    <option name="enableMcpServer" value="true" />
     <option name="port" value="64343" />
+    <option name="mcpServerPort" value="64343" />
   </component>
 </application>
 EOF
-                else
+            else
+                if grep -q '<component name="McpServer' "$mcp_file"; then
+                    if ! grep -q 'enableMcpServer' "$mcp_file"; then
+                        sed -i '/<component name="McpServer.*/a \    <option name="enableMcpServer" value="true" />' "$mcp_file" 2>/dev/null || true
+                    fi
                     if grep -q 'name="port"' "$mcp_file"; then
                         sed -i -E 's/name="port" value="[0-9]+"/name="port" value="64343"/g' "$mcp_file" 2>/dev/null || true
-                    elif grep -q '64342' "$mcp_file"; then
-                        sed -i 's/64342/64343/g' "$mcp_file" 2>/dev/null || true
+                    fi
+                    if grep -q 'name="mcpServerPort"' "$mcp_file"; then
+                        sed -i -E 's/name="mcpServerPort" value="[0-9]+"/name="mcpServerPort" value="64343"/g' "$mcp_file" 2>/dev/null || true
                     fi
                 fi
+            fi
 
-                # Clean up duplicate files if created previously
-                rm -f "$opts_dir/mcp.xml" 2>/dev/null || true
-                rm -f "$opts_dir/editor-font.xml" 2>/dev/null || true
-
-                # 2. Configure Noto Color Emoji fallback font in editor.font.xml
-                font_file="$opts_dir/editor.font.xml"
-                if [ ! -f "$font_file" ]; then
-                    cat > "$font_file" << 'EOF'
+            # 2. Configure Noto Color Emoji fallback font in editor-font.xml (Component: DefaultFont)
+            font_file="$opts_dir/editor-font.xml"
+            if [ ! -f "$font_file" ]; then
+                cat > "$font_file" << 'EOF'
 <application>
-  <component name="EditorFont">
-    <option name="USE_SECONDARY_FONT_FAMILY" value="true" />
+  <component name="DefaultFont">
+    <option name="VERSION" value="1" />
     <option name="SECONDARY_FONT_FAMILY" value="Noto Color Emoji" />
   </component>
 </application>
 EOF
-                else
-                    if ! grep -q 'SECONDARY_FONT_FAMILY' "$font_file"; then
-                        sed -i '/<component name="EditorFont">/a \    <option name="USE_SECONDARY_FONT_FAMILY" value="true" />\n    <option name="SECONDARY_FONT_FAMILY" value="Noto Color Emoji" />' "$font_file" 2>/dev/null || true
+            else
+                if ! grep -q 'SECONDARY_FONT_FAMILY' "$font_file"; then
+                    if grep -q '<component name="DefaultFont">' "$font_file"; then
+                        sed -i '/<component name="DefaultFont">/a \    <option name="SECONDARY_FONT_FAMILY" value="Noto Color Emoji" />' "$font_file" 2>/dev/null || true
                     fi
                 fi
-            done
-
-            chown -R "$ACTUAL_USER:$ACTUAL_USER" "$jb_base" 2>/dev/null || true
+            fi
         done
+
+        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" 2>/dev/null || true
     fi
 fi
 
