@@ -22,8 +22,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": [
-        "^packages/versions\\.env$"
+      "managerFilePatterns": [
+        "/^packages/versions\\.env$/"
       ],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>[^\\s]+)\\s+depName=(?<depName>[^\\s]+)(?:\\s+packageName=(?<packageName>[^\\s]+))?(?:\\s+versioning=(?<versioning>[^\\s]+))?\\n[A-Z0-9_]+=\"(?<currentValue>[^\"]+)\""
