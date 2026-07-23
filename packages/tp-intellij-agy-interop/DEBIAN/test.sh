@@ -7,7 +7,7 @@ apt-get install -y jq
 
 # Clean up any leftover packages from previous test runs
 apt-get remove --purge -y tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop >/dev/null 2>&1 || true
-rm -rf /home/developer/.config/JetBrains /home/developer/.config/antigravity
+rm -f /home/developer/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml /home/developer/.config/antigravity/config.json
 
 # Step 1: Install tp-antigravity-cli alone
 echo "Installing tp-antigravity-cli alone..."

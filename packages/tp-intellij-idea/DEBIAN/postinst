@@ -33,6 +33,9 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
         echo "Configuring IntelliJ IDEA settings for '$ACTUAL_USER'..."
         
+        mkdir -p "$USER_HOME/.config"
+        chown "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
+
         JB_DIR="$USER_HOME/.config/JetBrains"
         mkdir -p "$JB_DIR"
 
@@ -68,7 +71,7 @@ EOF
             fi
         done
 
-        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" 2>/dev/null || true
+        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" "$USER_HOME/.config" 2>/dev/null || true
     fi
 fi
 
@@ -99,6 +102,11 @@ if [ "$HAS_INTELLIJ" = "true" ] && [ "$HAS_ANTIGRAVITY" = "true" ]; then
         USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
         if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
             echo "Configuring IntelliJ IDEA and Antigravity-CLI MCP interop for '$ACTUAL_USER'..."
+
+            mkdir -p "$USER_HOME/.config"
+            if [ "$(id -u)" = "0" ]; then
+                chown "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
+            fi
 
             # 1. Configure IntelliJ IDEA MCP Server settings
             JB_DIR="$USER_HOME/.config/JetBrains"
@@ -150,7 +158,9 @@ A_EOF
                 fi
             fi
 
-            chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" "$AGY_DIR" 2>/dev/null || true
+            if [ "$(id -u)" = "0" ]; then
+                chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" "$AGY_DIR" "$USER_HOME/.config" 2>/dev/null || true
+            fi
         fi
     fi
 fi
