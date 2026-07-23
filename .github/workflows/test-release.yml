@@ -67,7 +67,7 @@ jobs:
 
       - name: Download assets from draft release via GitHub Script
         if: steps.release.outputs.tag != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -416,7 +416,7 @@ jobs:
 
       - name: Update release body with test results
         if: steps.release.outputs.skip != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = '${{ steps.release.outputs.tag }}';
@@ -476,7 +476,7 @@ jobs:
             console.log(`Release ${tag} has been published!`);
 
       - name: Post success comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = '${{ steps.release.outputs.tag }}';
@@ -526,7 +526,7 @@ jobs:
 
       - name: Update release with failure notice
         if: steps.release.outputs.skip != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = '${{ steps.release.outputs.tag }}';
@@ -579,7 +579,7 @@ jobs:
 
       - name: Create issue for failed release
         if: steps.release.outputs.skip != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = '${{ steps.release.outputs.tag }}';
