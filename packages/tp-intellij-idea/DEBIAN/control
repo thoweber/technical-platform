@@ -1,9 +1,9 @@
 Package: tp-intellij-idea
-Version: 1.0.18
+Version: 1.0.19
 Section: devel
 Priority: optional
 Architecture: all
-Depends: snapd, libxtst6, libxrender1, libxi6, libxrandr2, libxcursor1, libxinerama1
+Depends: snapd, libxtst6, libxrender1, libxi6, libxrandr2, libxcursor1, libxinerama1, jq
 Recommends: tp-sdkman-java
 Suggests: tp-intellij-agy-interop
 Maintainer: Technical Platform <noreply@example.com>

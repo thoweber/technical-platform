@@ -3,6 +3,7 @@ set -e
 
 echo "Testing synchronous IntelliJ IDEA & Antigravity-CLI MCP interop configuration..."
 apt-get update
+apt-get install -y jq
 
 # Clean up any leftover packages from previous test runs
 apt-get remove --purge -y tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop >/dev/null 2>&1 || true
