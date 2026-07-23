@@ -62,17 +62,7 @@ EOF
     fi
 fi
 
-# Auto-install interop package if tp-antigravity-cli is already installed
-if dpkg-query -W -f='${Status}' tp-antigravity-cli 2>/dev/null | grep -q "ok installed"; then
-    if ! dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q "ok installed"; then
-        echo "Detected tp-antigravity-cli. Auto-installing tp-intellij-agy-interop..."
-        (
-            sleep 2
-            DEBIAN_FRONTEND=noninteractive apt-get install -y tp-intellij-agy-interop >/dev/null 2>&1
-        ) >/dev/null 2>&1 &
-        disown 2>/dev/null || true
-    fi
-fi
+
 
 echo ""
 echo "tp-intellij-idea installation complete!"
