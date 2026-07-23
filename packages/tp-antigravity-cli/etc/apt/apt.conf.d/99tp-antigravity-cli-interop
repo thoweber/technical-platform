@@ -1,3 +1,0 @@
-DPkg::Post-Invoke {
-    "if dpkg-query -W -f='${Status}' tp-intellij-idea 2>/dev/null | grep -q 'ok installed' && dpkg-query -W -f='${Status}' tp-antigravity-cli 2>/dev/null | grep -q 'ok installed' && ! dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q 'ok installed'; then echo 'Both IntelliJ IDEA and Antigravity-CLI detected. Auto-installing tp-intellij-agy-interop...'; (sleep 1 && DEBIAN_FRONTEND=noninteractive apt-get install -y tp-intellij-agy-interop) >/dev/null 2>&1 & fi";
-};

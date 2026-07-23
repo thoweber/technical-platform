@@ -1,42 +1,30 @@
 #!/bin/bash
 set -e
 
-echo "Testing tp-intellij-agy-interop automatic APT Post-Invoke installation..."
+echo "Testing synchronous IntelliJ IDEA & Antigravity-CLI MCP interop configuration..."
 apt-get update
+
+# Clean up any leftover packages from previous test runs
+apt-get remove --purge -y tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop >/dev/null 2>&1 || true
+rm -rf /home/developer/.config/JetBrains /home/developer/.config/antigravity
 
 # Step 1: Install tp-antigravity-cli alone
 echo "Installing tp-antigravity-cli alone..."
 apt-get install -y tp-antigravity-cli
 
-# Verify interop package is NOT YET installed
-if dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q "ok installed"; then
-    echo "Error: tp-intellij-agy-interop was prematurely installed!"
+# Verify MCP configuration was NOT YET generated (IntelliJ is missing)
+if [ -f "/home/developer/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml" ]; then
+    echo "Error: MCP server config was prematurely generated!"
     exit 1
 fi
-echo "Verified: tp-intellij-agy-interop is not installed when only Antigravity CLI is present."
+echo "Verified: Interop config is skipped when only Antigravity CLI is present."
 
-# Step 2: Install tp-intellij-idea (triggers APT Post-Invoke hook to auto-install interop)
-echo "Installing tp-intellij-idea (should trigger APT Post-Invoke hook to auto-install interop)..."
+# Step 2: Install tp-intellij-idea (triggers synchronous interop setup in postinst)
+echo "Installing tp-intellij-idea (should trigger synchronous interop setup)..."
 apt-get install -y tp-intellij-idea
 
-# Step 3: Wait for tp-intellij-agy-interop to be auto-installed by background Post-Invoke hook
-echo "Waiting for APT Post-Invoke hook to auto-install tp-intellij-agy-interop..."
-INSTALLED=false
-for i in {1..15}; do
-    if dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q "ok installed"; then
-        INSTALLED=true
-        break
-    fi
-    sleep 1
-done
-
-if [ "$INSTALLED" != "true" ]; then
-    echo "Error: tp-intellij-agy-interop was NOT auto-installed after installing both tools!"
-    exit 1
-fi
-echo "✅ Auto-installation verified: tp-intellij-agy-interop was automatically installed by APT Post-Invoke hook!"
-
-# Step 4: Assert configuration file generation and interop settings as developer user
+# Step 3: Assert configuration file generation and interop settings as developer user
+echo "Verifying interop configuration generated synchronously..."
 test -f /etc/profile.d/tp-intellij-agy-interop.sh
 
 su - developer << 'EOF'
@@ -53,4 +41,4 @@ test -f "$agy_file"
 jq -e '.mcpServers["wsl-isolated-intellij-idea-mcp"].url == "http://127.0.0.1:63343/debugger-mcp/sse"' "$agy_file"
 EOF
 
-echo "✅ IntelliJ IDEA & MCP Interop auto-installation and configuration assertions passed!"
+echo "✅ IntelliJ IDEA & MCP Interop synchronous configuration assertions passed!"

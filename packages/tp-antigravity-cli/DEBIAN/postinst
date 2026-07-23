@@ -47,6 +47,11 @@ EOF
     ln -sf "$INSTALL_DIR/bin/agy" /usr/local/bin/agy
 fi
 
+# Run interop configuration check if both tools are present
+if [ -f /etc/profile.d/tp-intellij-agy-interop.sh ]; then
+    bash /etc/profile.d/tp-intellij-agy-interop.sh 2>/dev/null || true
+fi
+
 
 
 echo ""
