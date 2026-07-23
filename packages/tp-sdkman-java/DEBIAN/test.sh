@@ -29,4 +29,15 @@ if [ "$output" != "Hello, World!" ]; then
 fi
 EOF
 
-echo "✅ Java 25 & SDKMAN compilation and execution passed!"
+# Test package uninstallation teardown
+echo "Testing tp-sdkman-java removal and teardown..."
+apt-get remove -y tp-sdkman-java
+if [ -d "/opt/sdkman" ] || [ -f "/etc/profile.d/sdkman.sh" ]; then
+    echo "Error: /opt/sdkman or sdkman.sh was not completely removed on apt-get remove!"
+    exit 1
+fi
+echo "Verified: /opt/sdkman and all managed SDKs were cleanly removed."
+
+# Reinstall for subsequent package tests in pipeline
+apt-get install -y tp-sdkman-java
+echo "✅ Java 25 & SDKMAN compilation, execution, and uninstallation teardown passed!"

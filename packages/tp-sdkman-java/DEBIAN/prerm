@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    echo "Uninstalling all managed SDKs and removing SDKMAN installation..."
+    export SDKMAN_DIR="/opt/sdkman"
+    
+    if [ -d "$SDKMAN_DIR" ]; then
+        rm -rf "$SDKMAN_DIR" 2>/dev/null || true
+    fi
+
+    rm -f /etc/profile.d/sdkman.sh 2>/dev/null || true
+fi
+
+exit 0

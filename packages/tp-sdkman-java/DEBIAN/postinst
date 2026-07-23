@@ -7,19 +7,24 @@ export SDKMAN_DIR="/opt/sdkman"
 if [ ! -d "$SDKMAN_DIR" ]; then
     echo "Installing SDKMAN to $SDKMAN_DIR..."
     curl -s "https://get.sdkman.io" | bash
+fi
 
-    # Source SDKMAN and install Java 25
+# Source SDKMAN
+if [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]; then
     source "$SDKMAN_DIR/bin/sdkman-init.sh"
-    sdk install java 25-tem
-    sdk default java 25-tem
 
-    # Cleanup to reduce package size
-    sdk flush archives
-    sdk flush temp
-
-    echo "SDKMAN and Java 25 installed successfully"
-else
-    echo "SDKMAN already installed at $SDKMAN_DIR"
+    # Only install 25-tem if no Java version is installed in SDKMAN
+    HAS_JAVA=$(find "$SDKMAN_DIR/candidates/java" -mindepth 1 -maxdepth 1 ! -name 'current' 2>/dev/null | head -n 1)
+    if [ -z "$HAS_JAVA" ]; then
+        echo "No existing Java version found in SDKMAN. Installing Java 25-tem..."
+        sdk install java 25-tem
+        sdk default java 25-tem
+        sdk flush archives 2>/dev/null || true
+        sdk flush temp 2>/dev/null || true
+        echo "SDKMAN and Java 25-tem installed successfully."
+    else
+        echo "Existing Java version detected in SDKMAN ($HAS_JAVA). Skipping 25-tem installation."
+    fi
 fi
 
 exit 0
