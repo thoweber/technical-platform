@@ -2,7 +2,7 @@
 # Multi-stage Dockerfile for Technical Platform Ubuntu Distribution
 # Base: Ubuntu Noble Minimal with systemd, SDKMAN, Node 24 LTS, and custom APT repository
 
-FROM ubuntu:noble AS base
+FROM ubuntu:resolute AS base
 
 # Avoid interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive \
