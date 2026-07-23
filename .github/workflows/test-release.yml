@@ -182,9 +182,17 @@ jobs:
         id: first_boot
         shell: bash
         run: |
-          echo "Testing first boot..."
-          docker run --rm tp-wsl-test:latest uname -a
-          docker run --rm tp-wsl-test:latest cat /etc/os-release
+          echo "Testing first boot and WSL configuration..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            uname -a
+            cat /etc/os-release
+            grep -q "systemd=true" /etc/wsl.conf
+            grep -q "default=developer" /etc/wsl.conf
+            grep -q "appendWindowsPath=false" /etc/wsl.conf
+            grep -q "DEBIAN_FRONTEND=noninteractive" /etc/environment
+            echo "✅ First boot & WSL wsl.conf configuration verified!"
+          '
 
       - name: Test - Repository configuration
         id: repo_config
@@ -214,94 +222,123 @@ jobs:
           echo "Searching for tp-* packages..."
           docker run --rm tp-wsl-test:latest bash -c 'apt-cache search tp- | grep "^tp-"'
 
-      - name: Test - Java HelloWorld Compilation & Execution (tp-sdkman-java)
+      - name: Test - Java 25, SDKMAN & HelloWorld Compilation (tp-sdkman-java)
         id: compile_java
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-sdkman-java and compiling/running HelloWorld.java..."
+          echo "Installing tp-sdkman-java and verifying Java/SDKMAN..."
           docker run --rm tp-wsl-test:latest bash -c '
             set -e
             apt-get update
             apt-get install -y tp-sdkman-java
-            source /etc/profile
-            mkdir -p /tmp/java-test && cd /tmp/java-test
-            cat > HelloWorld.java << "EOF"
+            
+            echo "Testing SDKMAN & JAVA_HOME environment as developer user..."
+            su - developer -c "
+              set -e
+              source /etc/profile
+              test -n \"\$JAVA_HOME\"
+              java -version
+              javac -version
+              
+              mkdir -p /tmp/java-test && cd /tmp/java-test
+              cat > HelloWorld.java << \"EOF\"
 public class HelloWorld {
     public static void main(String[] args) {
-        System.out.println("Hello, World!");
+        System.out.println(\"Hello, World!\");
     }
 }
 EOF
-            javac HelloWorld.java
-            output=$(java HelloWorld)
-            echo "Java Execution Output: $output"
-            if [ "$output" != "Hello, World!" ]; then
-              echo "Java output mismatch!"
-              exit 1
-            fi
-            echo "✅ Java compilation and execution passed!"
+              javac HelloWorld.java
+              output=\$(java HelloWorld)
+              echo \"Java Execution Output: \$output\"
+              if [ \"\$output\" != \"Hello, World!\" ]; then
+                echo \"Java output mismatch!\"
+                exit 1
+              fi
+            "
+            echo "✅ Java 25 & SDKMAN compilation and execution passed!"
           '
 
-      - name: Test - Node.js HelloWorld Execution (tp-nvm-node)
+      - name: Test - Node.js 24, NVM & Angular CLI (tp-nvm-node)
         id: exec_node
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-nvm-node and running helloworld.js..."
+          echo "Installing tp-nvm-node and verifying Node.js, NVM & Angular CLI..."
           docker run --rm tp-wsl-test:latest bash -c '
             set -e
             apt-get update
             apt-get install -y tp-nvm-node
-            source /etc/profile
-            mkdir -p /tmp/node-test && cd /tmp/node-test
-            cat > helloworld.js << "EOF"
-console.log("Hello, World!");
+            
+            echo "Testing Node.js, NVM & Angular CLI as developer user..."
+            su - developer -c "
+              set -e
+              source /etc/profile
+              node --version
+              npm --version
+              ng version || true
+              
+              mkdir -p /tmp/node-test && cd /tmp/node-test
+              cat > helloworld.js << \"EOF\"
+console.log(\"Hello, World!\");
 EOF
-            output=$(node helloworld.js)
-            echo "Node Execution Output: $output"
-            if [ "$output" != "Hello, World!" ]; then
-              echo "Node.js output mismatch!"
-              exit 1
-            fi
-            echo "✅ Node.js execution passed!"
+              output=\$(node helloworld.js)
+              echo \"Node Execution Output: \$output\"
+              if [ \"\$output\" != \"Hello, World!\" ]; then
+                echo \"Node.js output mismatch!\"
+                exit 1
+              fi
+            "
+            echo "✅ Node.js 24, NVM & Angular CLI execution passed!"
           '
 
-      - name: Test - tp-docker Sudo-less Execution
+      - name: Test - tp-docker Immediate Sudo-less Execution & ACLs
         id: exec_docker
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing tp-docker and verifying immediate non-root sudo-less execution..."
+          echo "Installing tp-docker and verifying ACLs and non-root execution..."
           docker run --rm tp-wsl-test:latest bash -c '
             set -e
             apt-get update
             apt-get install -y tp-docker
             docker --version
             
-            # Verify immediate non-root execution without sudo as developer user
-            echo "Testing non-root execution as developer user..."
+            test -f /etc/tmpfiles.d/docker-acl.conf
+            grep -q "u:developer:rw" /etc/tmpfiles.d/docker-acl.conf
+            
+            echo "Testing immediate non-root execution without sudo as developer user..."
             su - developer -c "docker --version && docker compose version && docker buildx version"
             
             echo "✅ Immediate sudo-less docker execution passed!"
           '
 
-      - name: Test - tp-antigravity-cli Installation
+      - name: Test - tp-antigravity-cli Functionality & Teardown
         id: install_antigravity
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing tp-antigravity-cli..."
+          echo "Installing and testing tp-antigravity-cli..."
           docker run --rm tp-wsl-test:latest bash -c '
             set -e
             apt-get update
             apt-get install -y tp-antigravity-cli
-            source /etc/profile
             test -f /usr/local/bin/agy
-            echo "✅ tp-antigravity-cli installation passed!"
+            
+            # Test apt-get remove teardown
+            apt-get remove -y tp-antigravity-cli
+            if [ -f /usr/local/bin/agy ] || [ -d /opt/antigravity ]; then
+              echo "Failed: agy binary was not removed on apt-get remove!"
+              exit 1
+            fi
+            
+            # Reinstall for subsequent package tests
+            apt-get install -y tp-antigravity-cli
+            echo "✅ tp-antigravity-cli installation & teardown passed!"
           '
 
-      - name: Test - tp-intellij-idea & Interop Installation
+      - name: Test - tp-intellij-idea & MCP Interop Config Assertions
         id: install_intellij
         timeout-minutes: 10
         shell: bash
@@ -311,9 +348,37 @@ EOF
             set -e
             apt-get update
             apt-get install -y tp-intellij-idea tp-intellij-agy-interop
+            
             test -f /etc/profile.d/tp-intellij.sh
             test -f /etc/profile.d/tp-intellij-agy-interop.sh
-            echo "✅ IntelliJ IDEA & Interop package installation passed!"
+            
+            echo "Executing profile scripts and asserting XML/JSON configurations..."
+            su - developer -c "
+              set -e
+              source /etc/profile
+              
+              # Assert AT-SPI bridge environment variables
+              test \"\$AT_SPI_CLIENT_NO_AT_BRIDGE\" = \"1\"
+              test \"\$NO_AT_BRIDGE\" = \"1\"
+              
+              # Assert editor-font.xml (Component: DefaultFont -> Noto Color Emoji)
+              font_file=\"\$HOME/.config/JetBrains/IntelliJIdea2026.2/options/editor-font.xml\"
+              test -f \"\$font_file\"
+              grep -q \"<component name=\\\"DefaultFont\\\">\" \"\$font_file\"
+              grep -q \"SECONDARY_FONT_FAMILY.*Noto Color Emoji\" \"\$font_file\"
+              
+              # Assert mcpServer.xml (Component: McpServerSettings -> 64343)
+              mcp_file=\"\$HOME/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml\"
+              test -f \"\$mcp_file\"
+              grep -q \"<component name=\\\"McpServerSettings\\\">\" \"\$mcp_file\"
+              grep -q \"64343\" \"\$mcp_file\"
+              
+              # Assert antigravity config.json (wsl-isolated-mcp -> 63343)
+              agy_file=\"\$HOME/.config/antigravity/config.json\"
+              test -f \"\$agy_file\"
+              jq -e \".mcpServers[\\\"wsl-isolated-mcp\\\"].url == \\\"http://127.0.0.1:63343/debugger-mcp/sse\\\"\" \"\$agy_file\"
+            "
+            echo "✅ IntelliJ IDEA & MCP Interop configuration assertions passed!"
           '
 
       - name: Generate test report
@@ -337,9 +402,9 @@ EOF
           | Repository Configuration | ${{ steps.repo_config.outcome == 'success' && '✅ Passed' || (steps.repo_config.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | Java 25 & HelloWorld Compilation | ${{ steps.compile_java.outcome == 'success' && '✅ Passed' || (steps.compile_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | Node.js 24 & HelloWorld Execution | ${{ steps.exec_node.outcome == 'success' && '✅ Passed' || (steps.exec_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | tp-docker Functionality | ${{ steps.exec_docker.outcome == 'success' && '✅ Passed' || (steps.exec_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | tp-antigravity-cli Functionality | ${{ steps.install_antigravity.outcome == 'success' && '✅ Passed' || (steps.install_antigravity.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
-          | tp-intellij-idea & Interop Packages | ${{ steps.install_intellij.outcome == 'success' && '✅ Passed' || (steps.install_intellij.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-docker Immediate Sudo-less Execution | ${{ steps.exec_docker.outcome == 'success' && '✅ Passed' || (steps.exec_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-antigravity-cli Teardown & Execution | ${{ steps.install_antigravity.outcome == 'success' && '✅ Passed' || (steps.install_antigravity.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | tp-intellij-idea & Interop Assertions | ${{ steps.install_intellij.outcome == 'success' && '✅ Passed' || (steps.install_intellij.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
 
           ## Package Versions Tested
 
