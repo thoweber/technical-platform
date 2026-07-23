@@ -21,7 +21,7 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     echo "Adding user '$ACTUAL_USER' to docker group..."
     usermod -aG docker "$ACTUAL_USER"
     echo "User '$ACTUAL_USER' has been added to the docker group."
-    echo "You may need to log out and back in for group membership to take effect."
+    echo "⚠️You may need to log out and back in for group membership to take effect."
 else
     echo "Warning: Could not determine user to add to docker group."
     echo "Please run manually: sudo usermod -aG docker \$USER"
