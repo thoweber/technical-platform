@@ -31,5 +31,17 @@ EOF
                 sed -i 's/64342/64343/g' "$config_file" 2>/dev/null || true
             fi
         fi
+        font_config_file="$opts_dir/editor.font.xml"
+        if [ ! -f "$font_config_file" ]; then
+            mkdir -p "$opts_dir"
+            cat > "$font_config_file" << 'EOF'
+<application>
+  <component name="EditorFont">
+    <option name="USE_SECONDARY_FONT_FAMILY" value="true" />
+    <option name="SECONDARY_FONT_FAMILY" value="Noto Color Emoji" />
+  </component>
+</application>
+EOF
+        fi
     done
 fi
