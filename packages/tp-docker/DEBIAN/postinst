@@ -16,12 +16,23 @@ if ! getent group docker > /dev/null 2>&1; then
     groupadd docker
 fi
 
-# Add user to docker group if a valid user was found
+# Add user to docker group and configure ACLs for immediate sudo-less execution
 if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     echo "Adding user '$ACTUAL_USER' to docker group..."
-    usermod -aG docker "$ACTUAL_USER"
-    echo "User '$ACTUAL_USER' has been added to the docker group."
-    echo "⚠️You may need to log out and back in for group membership to take effect."
+    usermod -aG docker "$ACTUAL_USER" 2>/dev/null || true
+
+    # Grant POSIX ACL on /var/run/docker.sock for immediate sudo-less execution in current shell
+    if [ -e /var/run/docker.sock ] && command -v setfacl >/dev/null 2>&1; then
+        echo "Setting socket ACL for immediate execution..."
+        setfacl -m u:"$ACTUAL_USER":rw /var/run/docker.sock 2>/dev/null || true
+    fi
+
+    # Configure persistent systemd tmpfiles.d rule to maintain ACL on socket creation
+    mkdir -p /etc/tmpfiles.d
+    cat > /etc/tmpfiles.d/docker-acl.conf << EOF
+# Grant POSIX ACL read/write permissions on docker socket to $ACTUAL_USER
+a+ /var/run/docker.sock - - - - u:$ACTUAL_USER:rw
+EOF
 else
     echo "Warning: Could not determine user to add to docker group."
     echo "Please run manually: sudo usermod -aG docker \$USER"
@@ -32,6 +43,11 @@ if [ -d /run/systemd/system ]; then
     echo "Enabling and starting Docker service via systemd..."
     systemctl enable docker 2>/dev/null || true
     systemctl start docker 2>/dev/null || echo "Note: Docker service will start on next boot"
+
+    # Re-apply setfacl after service start if socket exists
+    if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ] && [ -e /var/run/docker.sock ] && command -v setfacl >/dev/null 2>&1; then
+        setfacl -m u:"$ACTUAL_USER":rw /var/run/docker.sock 2>/dev/null || true
+    fi
 else
     echo "System is not currently running systemd (PID 1)."
     echo "Enabling Docker service for systemd boot..."
