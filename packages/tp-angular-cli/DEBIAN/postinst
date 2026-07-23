@@ -4,13 +4,18 @@ set -e
 export NVM_DIR="/opt/nvm"
 
 if [ -s "$NVM_DIR/nvm.sh" ]; then
-    echo "Installing Angular CLI (@angular/cli) globally via npm..."
-    \. "$NVM_DIR/nvm.sh"
-    nvm use 24 2>/dev/null || true
-    npm install -g @angular/cli
-    npm cache clean --force 2>/dev/null || true
+    \. "$NVM_DIR/nvm.sh" 2>/dev/null || true
+    nvm use default 2>/dev/null || nvm use 24 2>/dev/null || true
+
+    if ! command -v ng >/dev/null 2>&1; then
+        echo "Installing Angular CLI (@angular/cli) globally via npm..."
+        npm install -g @angular/cli
+        npm cache clean --force 2>/dev/null || true
+    else
+        echo "Angular CLI (ng) is already installed."
+    fi
 else
-    echo "Error: NVM not found at $NVM_DIR"
+    echo "Error: NVM environment not found at $NVM_DIR"
     exit 1
 fi
 
