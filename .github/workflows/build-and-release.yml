@@ -325,16 +325,20 @@ jobs:
 
           ## Technical Platform Ubuntu Distribution Release
 
-          This release includes a pre-configured Ubuntu Noble WSL2 distribution with:
+          This release provides a clean, modular Ubuntu 24.04 LTS (Noble Numbat) WSL2 base distribution integrated with a custom APT repository of modular development packages (`tp-*`):
 
-          - ✅ Systemd and WSLg GUI support
-          - ☕ Java 25 (SDKMAN)
-          - 🅰️ Angular CLI (Node 24 LTS)
-          - 🧠 IntelliJ IDEA Ultimate
-            - 🔧 MCP server configured on port 64343
-          - 🚀 Antigravity CLI
-          - 📦 Custom APT repository integration
-          - 🔤 Google Noto Sans & Color Emoji fonts
+          ### Base Distribution Features
+          - ⚙️ **WSL2 Core**: Systemd init enabled (`systemd=true`), default `developer` user, isolated Linux PATH (`appendWindowsPath=false`).
+          - 🖥️ **WSLg & GUI**: Pre-installed X11/AWT GUI libraries and Noto Color Emoji fallback font.
+          - 📦 **Pre-configured APT Repository**: Pre-configured source pointing to `https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}`.
+
+          ### Available Development Packages (`tp-*`)
+          - ☕ **`tp-sdkman-java`**: Java 25 (Eclipse Temurin) managed via SDKMAN.
+          - 🅰️ **`tp-nvm-node`**: Node.js 24 LTS and Angular CLI managed via NVM.
+          - 🐳 **`tp-docker`**: Complete Docker CE suite (Engine, CLI, Buildx, Compose) with immediate POSIX ACL (`setfacl`) sudo-less execution.
+          - 🧠 **`tp-intellij-idea`**: IntelliJ IDEA Ultimate via snapd with Noto Color Emoji fallback font and WSLg performance fixes.
+          - 🚀 **`tp-antigravity-cli`**: Antigravity CLI binary (`agy`) with clean package teardown.
+          - 🔗 **`tp-intellij-agy-interop`**: MCP (Model Context Protocol) integration connecting IntelliJ IDEA (port 64343) and Antigravity CLI (`wsl-isolated-intellij-idea-mcp`).
 
           ### Installation
 
@@ -344,13 +348,6 @@ jobs:
           ```
 
           See `INSTALL.txt` for detailed instructions.
-
-          ### APT Repository
-
-          The distribution includes access to custom packages via:
-          ```
-          https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-          ```
           EOF
 
           echo "Verifying files to upload:"
