@@ -1,0 +1,10 @@
+Package: tp-intellij-idea
+Version: 1.0.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends: snapd
+Maintainer: Technical Platform <noreply@example.com>
+Description: IntelliJ IDEA Ultimate installation for Technical Platform WSL
+ This package installs IntelliJ IDEA Ultimate via snapd and configures
+ the MCP server port (64343) for integration with Technical Platform.

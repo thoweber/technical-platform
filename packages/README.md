@@ -105,13 +105,31 @@ docker run -d nginx
 
 ---
 
+### tp-intellij-idea
+**IntelliJ IDEA Ultimate via Snap**
+
+Installs IntelliJ IDEA Ultimate via snapd and configures the MCP server port to 64343.
+
+**Installation:**
+```bash
+sudo apt-get update
+sudo apt-get install tp-intellij-idea
+```
+
+**Usage:**
+```bash
+intellij-idea-ultimate &
+```
+
+---
+
 ## Installing Complete Development Environment
 
-To install everything (Java, Node, and Docker):
+To install everything (Java, Node, Docker, and IntelliJ IDEA):
 
 ```bash
 sudo apt-get update
-sudo apt-get install tp-sdkman-java tp-nvm-node tp-docker
+sudo apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea
 ```
 
 After installation, restart your shell or run:

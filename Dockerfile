@@ -95,7 +95,8 @@ RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.
 # - tp-sdkman-java: Installs SDKMAN with Java 25
 # - tp-nvm-node: Installs NVM with Node 24 LTS and Angular CLI
 # - tp-docker: Installs Docker CE complete suite and adds user to docker group
-# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker
+# - tp-intellij-idea: Installs IntelliJ IDEA Ultimate via snap
+# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea
 
 # Switch to user for configuration
 USER $USERNAME

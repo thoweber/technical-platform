@@ -1,0 +1,47 @@
+#!/bin/bash
+set -e
+
+# Get the user who invoked sudo (or current user if not using sudo)
+ACTUAL_USER="${SUDO_USER:-${USER}}"
+
+# If we're root and no SUDO_USER is set, try to find the default user
+if [ "$ACTUAL_USER" = "root" ] || [ -z "$ACTUAL_USER" ]; then
+    ACTUAL_USER=$(getent passwd 1000 | cut -d: -f1)
+fi
+
+# Install IntelliJ IDEA Ultimate via snapd
+if command -v snap > /dev/null 2>&1; then
+    echo "Installing IntelliJ IDEA Ultimate via snap..."
+    snap install intellij-idea-ultimate --classic || echo "Note: snap installation will complete when snapd service is active"
+else
+    echo "Warning: snap command not found. Please ensure snapd is installed."
+fi
+
+# Configure IntelliJ IDEA MCP server port to 64343
+if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+    USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+    if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
+        echo "Configuring IntelliJ IDEA settings for '$ACTUAL_USER'..."
+        
+        # Configure MCP server files if JetBrains config exists or update bash profile
+        MCP_CONFIG_DIR="$USER_HOME/.config/JetBrains"
+        mkdir -p "$MCP_CONFIG_DIR"
+        
+        for config_file in "$MCP_CONFIG_DIR"/IntelliJIdea*/options/mcpServer.xml; do
+            if [ -f "$config_file" ]; then
+                sed -i "s/64342/64343/g" "$config_file" 2>/dev/null || true
+            fi
+        done
+        
+        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config/JetBrains" 2>/dev/null || true
+    fi
+fi
+
+echo ""
+echo "tp-intellij-idea installation complete!"
+echo ""
+echo "Available command:"
+echo "  intellij-idea-ultimate"
+echo ""
+
+exit 0
