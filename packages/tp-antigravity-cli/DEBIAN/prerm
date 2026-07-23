@@ -2,9 +2,24 @@
 set -e
 
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-    echo "Removing Antigravity CLI..."
+    echo "Removing Antigravity CLI binary and symlinks..."
+    
+    # Remove system-wide binaries & symlinks
     rm -f /usr/local/bin/agy 2>/dev/null || true
+    rm -f /usr/bin/agy 2>/dev/null || true
     rm -rf /opt/antigravity 2>/dev/null || true
+
+    # Remove binary from user directories if installed by installer script
+    ACTUAL_USER="${SUDO_USER:-${USER}}"
+    if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+        USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+        if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
+            rm -f "$USER_HOME/.local/bin/agy" 2>/dev/null || true
+        fi
+    fi
+    
+    # Clean root's local bin if present
+    rm -f /root/.local/bin/agy 2>/dev/null || true
 fi
 
 exit 0
