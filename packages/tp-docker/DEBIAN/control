@@ -1,10 +1,9 @@
 Package: tp-docker
-Version: 1.0.3
+Version: 1.0.2
 Section: admin
 Priority: optional
 Architecture: all
-Depends: ca-certificates, curl, gnupg, acl
-Recommends: docker-ce | docker.io
+Depends: docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin, acl
 Maintainer: Technical Platform <noreply@example.com>
 Description: Docker CE complete installation for Technical Platform WSL
  This metapackage installs the complete Docker CE suite including:
