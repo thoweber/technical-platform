@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+# Remove snap on package removal or purge
+if command -v snap > /dev/null 2>&1; then
+    if snap list intellij-idea-ultimate > /dev/null 2>&1; then
+        echo "Removing IntelliJ IDEA Ultimate snap..."
+        if [ "$1" = "purge" ]; then
+            snap remove --purge intellij-idea-ultimate 2>/dev/null || snap remove intellij-idea-ultimate 2>/dev/null || true
+        else
+            snap remove intellij-idea-ultimate 2>/dev/null || true
+        fi
+    fi
+fi
+
+exit 0

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "purge" ]; then
+    echo "Purging tp-intellij-idea profile configuration..."
+    rm -f /etc/profile.d/tp-intellij.sh 2>/dev/null || true
+fi
+
+exit 0
