@@ -1,0 +1,10 @@
+Package: tp-angular-cli
+Version: 1.0.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends: tp-nvm-node
+Maintainer: Technical Platform <noreply@example.com>
+Description: Angular CLI installation for Technical Platform WSL
+ This package installs Angular CLI (@angular/cli) globally via npm
+ for Technical Platform WSL.

@@ -1,11 +1,12 @@
 Package: tp-nvm-node
-Version: 1.0.0
+Version: 1.0.1
 Section: devel
 Priority: optional
 Architecture: all
 Depends: curl
+Recommends: tp-angular-cli
 Maintainer: Technical Platform <noreply@example.com>
-Description: NVM with Node 24 LTS and Angular CLI for Technical Platform WSL
+Description: NVM with Node 24 LTS for Technical Platform WSL
  This package installs NVM (Node Version Manager) and Node.js 24 LTS
- for all users. Angular CLI is pre-installed globally.
+ for all users in Technical Platform WSL.
  NVM allows managing multiple Node.js versions.

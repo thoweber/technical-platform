@@ -260,24 +260,23 @@ EOF
             echo "✅ Java 25 & SDKMAN compilation and execution passed!"
           '
 
-      - name: Test - Node.js 24, NVM & Angular CLI (tp-nvm-node)
+      - name: Test - Node.js 24 & NVM (tp-nvm-node)
         id: exec_node
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-nvm-node and verifying Node.js, NVM & Angular CLI..."
+          echo "Installing tp-nvm-node and verifying Node.js & NVM..."
           docker run --rm tp-wsl-test:latest bash -c '
             set -e
             apt-get update
             apt-get install -y tp-nvm-node
             
-            echo "Testing Node.js, NVM & Angular CLI as developer user..."
+            echo "Testing Node.js & NVM as developer user..."
             su - developer -c "
               set -e
               source /etc/profile
               node --version
               npm --version
-              ng version || true
               
               mkdir -p /tmp/node-test && cd /tmp/node-test
               cat > helloworld.js << \"EOF\"
@@ -290,7 +289,27 @@ EOF
                 exit 1
               fi
             "
-            echo "✅ Node.js 24, NVM & Angular CLI execution passed!"
+            echo "✅ Node.js 24 & NVM execution passed!"
+          '
+
+      - name: Test - Angular CLI (tp-angular-cli)
+        id: exec_angular
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          echo "Installing tp-angular-cli and verifying ng CLI..."
+          docker run --rm tp-wsl-test:latest bash -c '
+            set -e
+            apt-get update
+            apt-get install -y tp-angular-cli
+            
+            echo "Testing Angular CLI as developer user..."
+            su - developer -c "
+              set -e
+              source /etc/profile
+              ng version
+            "
+            echo "✅ Angular CLI (tp-angular-cli) execution passed!"
           '
 
       - name: Test - tp-docker Immediate Sudo-less Execution & ACLs
@@ -402,6 +421,7 @@ EOF
           | Repository Configuration | ${{ steps.repo_config.outcome == 'success' && '✅ Passed' || (steps.repo_config.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | Java 25 & HelloWorld Compilation | ${{ steps.compile_java.outcome == 'success' && '✅ Passed' || (steps.compile_java.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | Node.js 24 & HelloWorld Execution | ${{ steps.exec_node.outcome == 'success' && '✅ Passed' || (steps.exec_node.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
+          | Angular CLI Execution (tp-angular-cli) | ${{ steps.exec_angular.outcome == 'success' && '✅ Passed' || (steps.exec_angular.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | tp-docker Immediate Sudo-less Execution | ${{ steps.exec_docker.outcome == 'success' && '✅ Passed' || (steps.exec_docker.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | tp-antigravity-cli Teardown & Execution | ${{ steps.install_antigravity.outcome == 'success' && '✅ Passed' || (steps.install_antigravity.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |
           | tp-intellij-idea & Interop Assertions | ${{ steps.install_intellij.outcome == 'success' && '✅ Passed' || (steps.install_intellij.outcome == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |

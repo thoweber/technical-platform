@@ -334,7 +334,8 @@ jobs:
 
           ### Available Development Packages (`tp-*`)
           - ☕ **`tp-sdkman-java`**: Java 25 (Eclipse Temurin) managed via SDKMAN.
-          - 🅰️ **`tp-nvm-node`**: Node.js 24 LTS and Angular CLI managed via NVM.
+          - 🟢 **`tp-nvm-node`**: Node.js 24 LTS managed via NVM.
+          - 🅰️ **`tp-angular-cli`**: Angular CLI (`@angular/cli`) managed via npm.
           - 🐳 **`tp-docker`**: Complete Docker CE suite (Engine, CLI, Buildx, Compose) with immediate POSIX ACL (`setfacl`) sudo-less execution.
           - 🧠 **`tp-intellij-idea`**: IntelliJ IDEA Ultimate via snapd with Noto Color Emoji fallback font and WSLg performance fixes.
           - 🚀 **`tp-antigravity-cli`**: Antigravity CLI binary (`agy`) with clean package teardown.

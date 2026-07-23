@@ -103,12 +103,13 @@ RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.
 
 # Note: Development tools are available as optional tp-* packages:
 # - tp-sdkman-java: Installs SDKMAN with Java 25
-# - tp-nvm-node: Installs NVM with Node 24 LTS and Angular CLI
+# - tp-nvm-node: Installs NVM with Node 24 LTS
+# - tp-angular-cli: Installs Angular CLI (@angular/cli) globally via npm
 # - tp-docker: Installs Docker CE complete suite and adds user to docker group
 # - tp-intellij-idea: Installs IntelliJ IDEA Ultimate via snap
 # - tp-antigravity-cli: Installs Antigravity CLI binary (agy)
 # - tp-intellij-agy-interop: Configures IntelliJ & Antigravity MCP integration
-# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop
+# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-angular-cli tp-docker tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop
 
 # Switch to user for configuration
 USER $USERNAME

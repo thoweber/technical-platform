@@ -39,9 +39,9 @@ sdk use java 17.0.9-tem
 ---
 
 ### tp-nvm-node
-**NVM with Node.js 24 LTS and Angular CLI**
+**NVM with Node.js 24 LTS**
 
-Installs NVM, Node.js 24 LTS, and Angular CLI system-wide for all users.
+Installs NVM and Node.js 24 LTS system-wide for all users.
 
 **Installation:**
 ```bash
@@ -55,9 +55,6 @@ sudo apt-get install tp-nvm-node
 node --version
 npm --version
 
-# Angular CLI is pre-installed
-ng version
-
 # Use NVM to manage Node versions
 nvm list
 nvm install 20
@@ -65,6 +62,25 @@ nvm use 20
 ```
 
 **Location:** `/opt/nvm`
+
+---
+
+### tp-angular-cli
+**Angular CLI (@angular/cli)**
+
+Installs Angular CLI (`@angular/cli`) globally via npm for Technical Platform WSL.
+
+**Installation:**
+```bash
+sudo apt-get update
+sudo apt-get install tp-angular-cli
+```
+
+**Usage:**
+```bash
+ng version
+ng new my-app
+```
 
 ---
 

@@ -17,13 +17,10 @@ if [ ! -d "$NVM_DIR" ]; then
     nvm use 24
     nvm alias default 24
 
-    # Install Angular CLI globally
-    npm install -g @angular/cli
-
     # Cleanup npm cache to reduce size
     npm cache clean --force
 
-    echo "NVM, Node 24 LTS, and Angular CLI installed successfully"
+    echo "NVM and Node 24 LTS installed successfully"
 else
     echo "NVM already installed at $NVM_DIR"
 fi
