@@ -144,7 +144,7 @@ agy --version
 ### tp-intellij-agy-interop
 **IntelliJ IDEA & Antigravity-CLI MCP Interoperability**
 
-Configures Model Context Protocol (MCP) server integration between IntelliJ IDEA and Antigravity CLI. Adds `wsl-isolated-mcp` to `~/.config/antigravity/config.json` and pre-configures IntelliJ IDEA's `mcpServer.xml`.
+Configures Model Context Protocol (MCP) server integration between IntelliJ IDEA and Antigravity CLI. Adds `wsl-isolated-intellij-idea-mcp` to `~/.config/antigravity/config.json` and pre-configures IntelliJ IDEA's `mcpServer.xml`.
 
 **Installation:**
 ```bash

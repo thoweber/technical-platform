@@ -12,7 +12,7 @@ if [ -n "$HOME" ] && [ -d "$HOME" ]; then
         cat > "$AGY_CONFIG" << 'EOF'
 {
   "mcpServers": {
-    "wsl-isolated-mcp": {
+    "wsl-isolated-intellij-idea-mcp": {
       "url": "http://127.0.0.1:63343/debugger-mcp/sse"
     }
   }
@@ -21,7 +21,7 @@ EOF
     else
         if command -v jq >/dev/null 2>&1; then
             tmp_json=$(mktemp)
-            if jq '.mcpServers["wsl-isolated-mcp"] = {"url": "http://127.0.0.1:63343/debugger-mcp/sse"}' "$AGY_CONFIG" > "$tmp_json" 2>/dev/null; then
+            if jq '.mcpServers["wsl-isolated-intellij-idea-mcp"] = {"url": "http://127.0.0.1:63343/debugger-mcp/sse"}' "$AGY_CONFIG" > "$tmp_json" 2>/dev/null; then
                 mv "$tmp_json" "$AGY_CONFIG"
             else
                 rm -f "$tmp_json"
