@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+if [ "$1" = "purge" ]; then
+    rm -f /etc/profile.d/tp-intellij-agy-interop.sh 2>/dev/null || true
+fi
+exit 0

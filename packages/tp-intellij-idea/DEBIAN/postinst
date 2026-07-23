@@ -17,7 +17,7 @@ else
     echo "Warning: snap command not found. Please ensure snapd is installed."
 fi
 
-# Configure IntelliJ IDEA MCP server port to 64343 and Noto Color Emoji fallback font
+# Configure Noto Color Emoji fallback font
 if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
     if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
@@ -38,33 +38,7 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
             opts_dir="$idea_dir/options"
             mkdir -p "$opts_dir"
 
-            # 1. Configure MCP Server in mcpServer.xml (Component: McpServerSettings)
-            mcp_file="$opts_dir/mcpServer.xml"
-            if [ ! -f "$mcp_file" ]; then
-                cat > "$mcp_file" << 'EOF'
-<application>
-  <component name="McpServerSettings">
-    <option name="enableMcpServer" value="true" />
-    <option name="port" value="64343" />
-    <option name="mcpServerPort" value="64343" />
-  </component>
-</application>
-EOF
-            else
-                if grep -q '<component name="McpServer' "$mcp_file"; then
-                    if ! grep -q 'enableMcpServer' "$mcp_file"; then
-                        sed -i '/<component name="McpServer.*/a \    <option name="enableMcpServer" value="true" />' "$mcp_file" 2>/dev/null || true
-                    fi
-                    if grep -q 'name="port"' "$mcp_file"; then
-                        sed -i -E 's/name="port" value="[0-9]+"/name="port" value="64343"/g' "$mcp_file" 2>/dev/null || true
-                    fi
-                    if grep -q 'name="mcpServerPort"' "$mcp_file"; then
-                        sed -i -E 's/name="mcpServerPort" value="[0-9]+"/name="mcpServerPort" value="64343"/g' "$mcp_file" 2>/dev/null || true
-                    fi
-                fi
-            fi
-
-            # 2. Configure Noto Color Emoji fallback font in editor-font.xml (Component: DefaultFont)
+            # Configure Noto Color Emoji fallback font in editor-font.xml (Component: DefaultFont)
             font_file="$opts_dir/editor-font.xml"
             if [ ! -f "$font_file" ]; then
                 cat > "$font_file" << 'EOF'

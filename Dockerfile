@@ -107,7 +107,8 @@ RUN echo "deb [trusted=yes] ${APT_REPO_URL} noble main" > /etc/apt/sources.list.
 # - tp-docker: Installs Docker CE complete suite and adds user to docker group
 # - tp-intellij-idea: Installs IntelliJ IDEA Ultimate via snap
 # - tp-antigravity-cli: Installs Antigravity CLI binary (agy)
-# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli
+# - tp-intellij-agy-interop: Configures IntelliJ & Antigravity MCP integration
+# Install with: apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop
 
 # Switch to user for configuration
 USER $USERNAME

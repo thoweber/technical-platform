@@ -141,13 +141,26 @@ agy --version
 
 ---
 
+### tp-intellij-agy-interop
+**IntelliJ IDEA & Antigravity-CLI MCP Interoperability**
+
+Configures Model Context Protocol (MCP) server integration between IntelliJ IDEA and Antigravity CLI. Adds `wsl-isolated-mcp` to `~/.config/antigravity/config.json` and pre-configures IntelliJ IDEA's `mcpServer.xml`.
+
+**Installation:**
+```bash
+sudo apt-get update
+sudo apt-get install tp-intellij-agy-interop
+```
+
+---
+
 ## Installing Complete Development Environment
 
-To install everything (Java, Node, Docker, IntelliJ IDEA, and Antigravity CLI):
+To install everything (Java, Node, Docker, IntelliJ IDEA, Antigravity CLI, and MCP Interop):
 
 ```bash
 sudo apt-get update
-sudo apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli
+sudo apt-get install tp-sdkman-java tp-nvm-node tp-docker tp-intellij-idea tp-antigravity-cli tp-intellij-agy-interop
 ```
 
 After installation, restart your shell or run:
