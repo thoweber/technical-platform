@@ -8,8 +8,8 @@ apt-get install -y tp-intellij-idea
 test -f /etc/profile.d/tp-intellij.sh
 
 su - developer << 'EOF'
+source /etc/profile 2>/dev/null || true
 set -e
-source /etc/profile
 
 test "$AT_SPI_CLIENT_NO_AT_BRIDGE" = "1"
 test "$NO_AT_BRIDGE" = "1"

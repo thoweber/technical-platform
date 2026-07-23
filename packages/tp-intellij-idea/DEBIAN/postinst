@@ -17,6 +17,16 @@ else
     echo "Warning: snap command not found. Please ensure snapd is installed."
 fi
 
+# Configure AT-SPI accessibility environment workaround script dynamically
+if [ ! -f /etc/profile.d/tp-intellij.sh ]; then
+    cat > /etc/profile.d/tp-intellij.sh << 'EOF'
+# Technical Platform WSL - IntelliJ IDEA AT-SPI Accessibility Workaround
+export AT_SPI_CLIENT_NO_AT_BRIDGE=1
+export NO_AT_BRIDGE=1
+EOF
+    chmod +x /etc/profile.d/tp-intellij.sh
+fi
+
 # Configure Noto Color Emoji fallback font
 if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
     USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
