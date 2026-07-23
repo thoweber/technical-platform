@@ -265,7 +265,7 @@ jobs:
           Removing the WSL Distribution:
           ------------------------------
           1. Open PowerShell or Command Prompt and run:
-            wsl --shutdown TechnicalPlatform
+            wsl --terminate TechnicalPlatform
             wsl --unregister TechnicalPlatform
           EOF
 
