@@ -261,6 +261,12 @@ jobs:
           - Docker CE suite
           - Custom APT repository integration
           - Google Noto Sans & Color Emoji default fonts
+          
+          Removing the WSL Distribution:
+          ------------------------------
+          1. Open PowerShell or Command Prompt and run:
+            wsl --shutdown TechnicalPlatform
+            wsl --unregister TechnicalPlatform
           EOF
 
       - name: Generate SHA256 checksums
