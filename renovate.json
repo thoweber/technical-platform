@@ -17,6 +17,12 @@
         "digest"
       ],
       "automerge": false
+    },
+    {
+      "matchPackageNames": [
+        "ubuntu"
+      ],
+      "enabled": false
     }
   ],
   "customManagers": [
