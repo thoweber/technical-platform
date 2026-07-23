@@ -1,10 +1,10 @@
 Package: tp-antigravity-cli
-Version: 1.0.4
+Version: 1.0.5
 Section: devel
 Priority: optional
 Architecture: all
 Depends: curl, ca-certificates, git
-Recommends: tp-intellij-agy-interop
+Suggests: tp-intellij-agy-interop
 Maintainer: Technical Platform <noreply@example.com>
 Description: Antigravity CLI installation for Technical Platform WSL
  This package installs the Antigravity CLI binary (agy) system-wide

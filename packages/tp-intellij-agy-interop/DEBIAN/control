@@ -1,10 +1,10 @@
 Package: tp-intellij-agy-interop
-Version: 1.0.2
+Version: 1.0.3
 Section: devel
 Priority: optional
 Architecture: all
 Depends: jq, ca-certificates
-Recommends: tp-intellij-idea, tp-antigravity-cli
+Enhances: tp-intellij-idea, tp-antigravity-cli
 Maintainer: Technical Platform <noreply@example.com>
 Description: IntelliJ IDEA and Antigravity-CLI MCP Interoperability
  This package configures MCP (Model Context Protocol) integration between

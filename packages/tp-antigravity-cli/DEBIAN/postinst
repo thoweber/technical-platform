@@ -47,6 +47,14 @@ EOF
     ln -sf "$INSTALL_DIR/bin/agy" /usr/local/bin/agy
 fi
 
+# Auto-install interop package if tp-intellij-idea is already installed
+if dpkg-query -W -f='${Status}' tp-intellij-idea 2>/dev/null | grep -q "ok installed"; then
+    if ! dpkg-query -W -f='${Status}' tp-intellij-agy-interop 2>/dev/null | grep -q "ok installed"; then
+        echo "Detected tp-intellij-idea. Auto-installing tp-intellij-agy-interop..."
+        DEBIAN_FRONTEND=noninteractive apt-get install -y tp-intellij-agy-interop 2>/dev/null || true
+    fi
+fi
+
 echo ""
 echo "tp-antigravity-cli installation complete!"
 echo ""

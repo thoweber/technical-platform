@@ -1,10 +1,11 @@
 Package: tp-intellij-idea
-Version: 1.0.12
+Version: 1.0.13
 Section: devel
 Priority: optional
 Architecture: all
 Depends: snapd, libxtst6, libxrender1, libxi6, libxrandr2, libxcursor1, libxinerama1
-Recommends: tp-sdkman-java, tp-intellij-agy-interop
+Recommends: tp-sdkman-java
+Suggests: tp-intellij-agy-interop
 Maintainer: Technical Platform <noreply@example.com>
 Description: IntelliJ IDEA Ultimate installation for Technical Platform WSL
  This package installs IntelliJ IDEA Ultimate via snapd and configures
