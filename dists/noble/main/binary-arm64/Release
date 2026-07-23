@@ -1,0 +1,5 @@
+Component: main
+Origin: Technical Platform Repository
+Label: Technical Platform
+Architecture: arm64
+Description: Custom packages for WSL Ubuntu distribution

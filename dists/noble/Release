@@ -1,0 +1,37 @@
+Origin: Technical Platform Repository
+Label: Technical Platform
+Codename: noble
+Date: Thu, 23 Jul 2026 23:00:23 UTC
+Architectures: amd64 arm64
+Components: main
+Description: Custom packages for WSL Ubuntu distribution
+MD5Sum:
+ f0e291c94414cf313975ccbf43ca4894 4807 main/binary-amd64/Packages
+ 1531a0bad00ff7893046f07af037637c 1784 main/binary-amd64/Packages.gz
+ a3b52a881f1967938600204d6822189b 157 main/binary-amd64/Release
+ f0e291c94414cf313975ccbf43ca4894 4807 main/binary-arm64/Packages
+ 1531a0bad00ff7893046f07af037637c 1784 main/binary-arm64/Packages.gz
+ 3c0ceb9c755a79228e772c820dfd59e4 157 main/binary-arm64/Release
+ d41d8cd98f00b204e9800998ecf8427e 0 main/source/Sources
+ 7029066c27ac6f5ef18d660d5741979a 20 main/source/Sources.gz
+ c309ed9a013e369988e8e963d1807fc2 158 main/source/Release
+SHA1:
+ 6aa897e11673ad967075484f4ce5bdd328f92514 4807 main/binary-amd64/Packages
+ 259fe655bfb3a9d3a16327d1c141f24702d4ac66 1784 main/binary-amd64/Packages.gz
+ 59137005f68da217dbe59e2b2e2ca6f85b8a7e6a 157 main/binary-amd64/Release
+ 6aa897e11673ad967075484f4ce5bdd328f92514 4807 main/binary-arm64/Packages
+ 259fe655bfb3a9d3a16327d1c141f24702d4ac66 1784 main/binary-arm64/Packages.gz
+ f6b5925dcde7a2567c0d22a0d21f2aa6b7c05a21 157 main/binary-arm64/Release
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 main/source/Sources
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 main/source/Sources.gz
+ f6ef670b3a09bb2802bfd7be9222d745667f5f1b 158 main/source/Release
+SHA256:
+ 1aee2773eadb5ec9c4f317b3c5357c2e1090e8bd7404c6a4e43b681fb5509dbc 4807 main/binary-amd64/Packages
+ fd641089a511a7ae769c75a4067d8b6be598aad2a37f3f241534b3d4981224b6 1784 main/binary-amd64/Packages.gz
+ 5a5feda3d8acf02aefa4dbb190f40618b7a1091b023880e6969c0291111ffce3 157 main/binary-amd64/Release
+ 1aee2773eadb5ec9c4f317b3c5357c2e1090e8bd7404c6a4e43b681fb5509dbc 4807 main/binary-arm64/Packages
+ fd641089a511a7ae769c75a4067d8b6be598aad2a37f3f241534b3d4981224b6 1784 main/binary-arm64/Packages.gz
+ a508c765a59b357dcbe547dc0a7bd530a07309817353ac5337bb1f231437ab24 157 main/binary-arm64/Release
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/source/Sources
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 main/source/Sources.gz
+ fc0e76cc28463cd50d48d372690e3ab5bea62175f4db631d72c0d4f1e2c1e0a3 158 main/source/Release
