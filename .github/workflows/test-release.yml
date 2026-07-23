@@ -234,29 +234,28 @@ jobs:
             apt-get install -y tp-sdkman-java
             
             echo "Testing SDKMAN & JAVA_HOME environment as developer user..."
-            su - developer -c "
+            su - developer << "DEV_EOF"
               set -e
               source /etc/profile
-              test -n \"\$JAVA_HOME\"
               java -version
               javac -version
               
               mkdir -p /tmp/java-test && cd /tmp/java-test
-              cat > HelloWorld.java << \"EOF\"
+              cat > HelloWorld.java << "EOF"
 public class HelloWorld {
     public static void main(String[] args) {
-        System.out.println(\"Hello, World!\");
+        System.out.println("Hello, World!");
     }
 }
 EOF
               javac HelloWorld.java
-              output=\$(java HelloWorld)
-              echo \"Java Execution Output: \$output\"
-              if [ \"\$output\" != \"Hello, World!\" ]; then
-                echo \"Java output mismatch!\"
+              output=$(java HelloWorld)
+              echo "Java Execution Output: $output"
+              if [ "$output" != "Hello, World!" ]; then
+                echo "Java output mismatch!"
                 exit 1
               fi
-            "
+DEV_EOF
             echo "✅ Java 25 & SDKMAN compilation and execution passed!"
           '
 
@@ -272,23 +271,23 @@ EOF
             apt-get install -y tp-nvm-node
             
             echo "Testing Node.js & NVM as developer user..."
-            su - developer -c "
+            su - developer << "DEV_EOF"
               set -e
               source /etc/profile
               node --version
               npm --version
               
               mkdir -p /tmp/node-test && cd /tmp/node-test
-              cat > helloworld.js << \"EOF\"
-console.log(\"Hello, World!\");
+              cat > helloworld.js << "EOF"
+console.log("Hello, World!");
 EOF
-              output=\$(node helloworld.js)
-              echo \"Node Execution Output: \$output\"
-              if [ \"\$output\" != \"Hello, World!\" ]; then
-                echo \"Node.js output mismatch!\"
+              output=$(node helloworld.js)
+              echo "Node Execution Output: $output"
+              if [ "$output" != "Hello, World!" ]; then
+                echo "Node.js output mismatch!"
                 exit 1
               fi
-            "
+DEV_EOF
             echo "✅ Node.js 24 & NVM execution passed!"
           '
 
@@ -304,11 +303,12 @@ EOF
             apt-get install -y tp-angular-cli
             
             echo "Testing Angular CLI as developer user..."
-            su - developer -c "
+            su - developer << "DEV_EOF"
               set -e
               source /etc/profile
+              export NG_CLI_ANALYTICS=false
               ng version
-            "
+DEV_EOF
             echo "✅ Angular CLI (tp-angular-cli) execution passed!"
           '
 
@@ -328,8 +328,12 @@ EOF
             grep -q "u:developer:rw" /etc/tmpfiles.d/docker-acl.conf
             
             echo "Testing immediate non-root execution without sudo as developer user..."
-            su - developer -c "docker --version && docker compose version && docker buildx version"
-            
+            su - developer << "DEV_EOF"
+              set -e
+              docker --version
+              docker compose version
+              docker buildx version
+DEV_EOF
             echo "✅ Immediate sudo-less docker execution passed!"
           '
 
@@ -372,31 +376,31 @@ EOF
             test -f /etc/profile.d/tp-intellij-agy-interop.sh
             
             echo "Executing profile scripts and asserting XML/JSON configurations..."
-            su - developer -c "
+            su - developer << "DEV_EOF"
               set -e
               source /etc/profile
               
               # Assert AT-SPI bridge environment variables
-              test \"\$AT_SPI_CLIENT_NO_AT_BRIDGE\" = \"1\"
-              test \"\$NO_AT_BRIDGE\" = \"1\"
+              test "$AT_SPI_CLIENT_NO_AT_BRIDGE" = "1"
+              test "$NO_AT_BRIDGE" = "1"
               
               # Assert editor-font.xml (Component: DefaultFont -> Noto Color Emoji)
-              font_file=\"\$HOME/.config/JetBrains/IntelliJIdea2026.2/options/editor-font.xml\"
-              test -f \"\$font_file\"
-              grep -q \"<component name=\\\"DefaultFont\\\">\" \"\$font_file\"
-              grep -q \"SECONDARY_FONT_FAMILY.*Noto Color Emoji\" \"\$font_file\"
+              font_file="$HOME/.config/JetBrains/IntelliJIdea2026.2/options/editor-font.xml"
+              test -f "$font_file"
+              grep -q "<component name=\"DefaultFont\">" "$font_file"
+              grep -q "SECONDARY_FONT_FAMILY.*Noto Color Emoji" "$font_file"
               
               # Assert mcpServer.xml (Component: McpServerSettings -> 64343)
-              mcp_file=\"\$HOME/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml\"
-              test -f \"\$mcp_file\"
-              grep -q \"<component name=\\\"McpServerSettings\\\">\" \"\$mcp_file\"
-              grep -q \"64343\" \"\$mcp_file\"
+              mcp_file="$HOME/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml"
+              test -f "$mcp_file"
+              grep -q "<component name=\"McpServerSettings\">" "$mcp_file"
+              grep -q "64343" "$mcp_file"
               
               # Assert antigravity config.json (wsl-isolated-intellij-idea-mcp -> 63343)
-              agy_file=\"\$HOME/.config/antigravity/config.json\"
-              test -f \"\$agy_file\"
-              jq -e \".mcpServers[\\\"wsl-isolated-intellij-idea-mcp\\\"].url == \\\"http://127.0.0.1:63343/debugger-mcp/sse\\\"\" \"\$agy_file\"
-            "
+              agy_file="$HOME/.config/antigravity/config.json"
+              test -f "$agy_file"
+              jq -e ".mcpServers[\"wsl-isolated-intellij-idea-mcp\"].url == \"http://127.0.0.1:63343/debugger-mcp/sse\"" "$agy_file"
+DEV_EOF
             echo "✅ IntelliJ IDEA & MCP Interop configuration assertions passed!"
           '
 
