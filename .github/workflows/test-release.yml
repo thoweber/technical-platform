@@ -182,17 +182,7 @@ jobs:
         id: first_boot
         shell: bash
         run: |
-          echo "Testing first boot and WSL configuration..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            uname -a
-            cat /etc/os-release
-            grep -q "systemd=true" /etc/wsl.conf
-            grep -q "default=developer" /etc/wsl.conf
-            grep -q "appendWindowsPath=false" /etc/wsl.conf
-            grep -q "DEBIAN_FRONTEND=noninteractive" /etc/environment
-            echo "✅ First boot & WSL wsl.conf configuration verified!"
-          '
+          docker run --rm -v $(pwd)/tests/e2e:/tests tp-wsl-test:latest /tests/test_system.sh
 
       - name: Test - Repository configuration
         id: repo_config
@@ -227,182 +217,42 @@ jobs:
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-sdkman-java and verifying Java/SDKMAN..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            apt-get update
-            apt-get install -y tp-sdkman-java
-            
-            echo "Testing SDKMAN & JAVA_HOME environment as developer user..."
-            su - developer << "DEV_EOF"
-              set -e
-              source /etc/profile
-              java -version
-              javac -version
-              
-              mkdir -p /tmp/java-test && cd /tmp/java-test
-              cat > HelloWorld.java << "EOF"
-public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}
-EOF
-              javac HelloWorld.java
-              output=$(java HelloWorld)
-              echo "Java Execution Output: $output"
-              if [ "$output" != "Hello, World!" ]; then
-                echo "Java output mismatch!"
-                exit 1
-              fi
-DEV_EOF
-            echo "✅ Java 25 & SDKMAN compilation and execution passed!"
-          '
+          docker run --rm -v $(pwd)/packages/tp-sdkman-java/DEBIAN:/pkg tp-wsl-test:latest /pkg/test.sh
 
       - name: Test - Node.js 24 & NVM (tp-nvm-node)
         id: exec_node
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-nvm-node and verifying Node.js & NVM..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            apt-get update
-            apt-get install -y tp-nvm-node
-            
-            echo "Testing Node.js & NVM as developer user..."
-            su - developer << "DEV_EOF"
-              set -e
-              source /etc/profile
-              node --version
-              npm --version
-              
-              mkdir -p /tmp/node-test && cd /tmp/node-test
-              cat > helloworld.js << "EOF"
-console.log("Hello, World!");
-EOF
-              output=$(node helloworld.js)
-              echo "Node Execution Output: $output"
-              if [ "$output" != "Hello, World!" ]; then
-                echo "Node.js output mismatch!"
-                exit 1
-              fi
-DEV_EOF
-            echo "✅ Node.js 24 & NVM execution passed!"
-          '
+          docker run --rm -v $(pwd)/packages/tp-nvm-node/DEBIAN:/pkg tp-wsl-test:latest /pkg/test.sh
 
       - name: Test - Angular CLI (tp-angular-cli)
         id: exec_angular
         timeout-minutes: 15
         shell: bash
         run: |
-          echo "Installing tp-angular-cli and verifying ng CLI..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            apt-get update
-            apt-get install -y tp-angular-cli
-            
-            echo "Testing Angular CLI as developer user..."
-            su - developer << "DEV_EOF"
-              set -e
-              source /etc/profile
-              export NG_CLI_ANALYTICS=false
-              ng version
-DEV_EOF
-            echo "✅ Angular CLI (tp-angular-cli) execution passed!"
-          '
+          docker run --rm -v $(pwd)/packages/tp-angular-cli/DEBIAN:/pkg tp-wsl-test:latest /pkg/test.sh
 
       - name: Test - tp-docker Immediate Sudo-less Execution & ACLs
         id: exec_docker
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing tp-docker and verifying ACLs and non-root execution..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            apt-get update
-            apt-get install -y tp-docker
-            docker --version
-            
-            test -f /etc/tmpfiles.d/docker-acl.conf
-            grep -q "u:developer:rw" /etc/tmpfiles.d/docker-acl.conf
-            
-            echo "Testing immediate non-root execution without sudo as developer user..."
-            su - developer << "DEV_EOF"
-              set -e
-              docker --version
-              docker compose version
-              docker buildx version
-DEV_EOF
-            echo "✅ Immediate sudo-less docker execution passed!"
-          '
+          docker run --rm -v $(pwd)/packages/tp-docker/DEBIAN:/pkg tp-wsl-test:latest /pkg/test.sh
 
       - name: Test - tp-antigravity-cli Functionality & Teardown
         id: install_antigravity
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing and testing tp-antigravity-cli..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            apt-get update
-            apt-get install -y tp-antigravity-cli
-            test -f /usr/local/bin/agy
-            
-            # Test apt-get remove teardown
-            apt-get remove -y tp-antigravity-cli
-            if [ -f /usr/local/bin/agy ] || [ -d /opt/antigravity ]; then
-              echo "Failed: agy binary was not removed on apt-get remove!"
-              exit 1
-            fi
-            
-            # Reinstall for subsequent package tests
-            apt-get install -y tp-antigravity-cli
-            echo "✅ tp-antigravity-cli installation & teardown passed!"
-          '
+          docker run --rm -v $(pwd)/packages/tp-antigravity-cli/DEBIAN:/pkg tp-wsl-test:latest /pkg/test.sh
 
       - name: Test - tp-intellij-idea & MCP Interop Config Assertions
         id: install_intellij
         timeout-minutes: 10
         shell: bash
         run: |
-          echo "Installing tp-intellij-idea and tp-intellij-agy-interop..."
-          docker run --rm tp-wsl-test:latest bash -c '
-            set -e
-            apt-get update
-            apt-get install -y tp-intellij-idea tp-intellij-agy-interop
-            
-            test -f /etc/profile.d/tp-intellij.sh
-            test -f /etc/profile.d/tp-intellij-agy-interop.sh
-            
-            echo "Executing profile scripts and asserting XML/JSON configurations..."
-            su - developer << "DEV_EOF"
-              set -e
-              source /etc/profile
-              
-              # Assert AT-SPI bridge environment variables
-              test "$AT_SPI_CLIENT_NO_AT_BRIDGE" = "1"
-              test "$NO_AT_BRIDGE" = "1"
-              
-              # Assert editor-font.xml (Component: DefaultFont -> Noto Color Emoji)
-              font_file="$HOME/.config/JetBrains/IntelliJIdea2026.2/options/editor-font.xml"
-              test -f "$font_file"
-              grep -q "<component name=\"DefaultFont\">" "$font_file"
-              grep -q "SECONDARY_FONT_FAMILY.*Noto Color Emoji" "$font_file"
-              
-              # Assert mcpServer.xml (Component: McpServerSettings -> 64343)
-              mcp_file="$HOME/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml"
-              test -f "$mcp_file"
-              grep -q "<component name=\"McpServerSettings\">" "$mcp_file"
-              grep -q "64343" "$mcp_file"
-              
-              # Assert antigravity config.json (wsl-isolated-intellij-idea-mcp -> 63343)
-              agy_file="$HOME/.config/antigravity/config.json"
-              test -f "$agy_file"
-              jq -e ".mcpServers[\"wsl-isolated-intellij-idea-mcp\"].url == \"http://127.0.0.1:63343/debugger-mcp/sse\"" "$agy_file"
-DEV_EOF
-            echo "✅ IntelliJ IDEA & MCP Interop configuration assertions passed!"
-          '
+          docker run --rm -v $(pwd)/packages/tp-intellij-idea/DEBIAN:/pkg_idea -v $(pwd)/packages/tp-intellij-agy-interop/DEBIAN:/pkg_interop tp-wsl-test:latest bash -c '/pkg_idea/test.sh && /pkg_interop/test.sh'
 
       - name: Generate test report
         if: always()

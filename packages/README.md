@@ -200,22 +200,17 @@ sudo dpkg -i tp-sdkman-java.deb
 
 ### Testing Packages
 
-After building, test the package:
+Each package includes a collocated `DEBIAN/test.sh` test script used by the automated release pipeline. You can run any package's test script locally inside a test container or system:
 
 ```bash
-# Install
+# Run test script directly inside container
+sudo ./packages/tp-sdkman-java/DEBIAN/test.sh
+
+# Or test via dpkg
 sudo dpkg -i ./tp-sdkman-java.deb
-
-# Verify installation
-dpkg -l | grep tp-sdkman-java
-
-# Test functionality
 source /etc/profile.d/sdkman.sh
 sdk version
 java -version
-
-# Remove
-sudo apt-get remove tp-sdkman-java
 ```
 
 ---
@@ -228,7 +223,9 @@ Each package follows standard Debian packaging conventions with the `tp-` prefix
 tp-package-name/
 ├── DEBIAN/
 │   ├── control       # Package metadata
-│   └── postinst      # Post-installation script
+│   ├── postinst      # Post-installation script
+│   ├── prerm         # Pre-removal script (optional)
+│   └── test.sh       # Automated E2E test script
 └── etc/
     └── profile.d/
         └── script.sh # Environment configuration
