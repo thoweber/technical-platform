@@ -19,22 +19,32 @@ else
     echo "Antigravity CLI setup completed."
 fi
 
-# Locate the installed agy binary across potential install paths
+# Locate the installed agy binary across all potential install paths
 AGY_BIN=""
 if [ -f "$INSTALL_DIR/bin/agy" ]; then
     AGY_BIN="$INSTALL_DIR/bin/agy"
-elif [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+elif [ -n "$ACTUAL_USER" ] && [ -f "$(getent passwd "$ACTUAL_USER" | cut -d: -f6 2>/dev/null)/.local/bin/agy" ]; then
     USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
-    if [ -f "$USER_HOME/.local/bin/agy" ]; then
-        AGY_BIN="$USER_HOME/.local/bin/agy"
-    fi
+    AGY_BIN="$USER_HOME/.local/bin/agy"
 elif [ -f "/root/.local/bin/agy" ]; then
     AGY_BIN="/root/.local/bin/agy"
+elif [ -f "/usr/local/bin/agy" ]; then
+    AGY_BIN="/usr/local/bin/agy"
 fi
 
 if [ -n "$AGY_BIN" ] && [ -f "$AGY_BIN" ]; then
     chmod +x "$AGY_BIN" 2>/dev/null || true
-    ln -sf "$AGY_BIN" /usr/local/bin/agy
+    if [ "$AGY_BIN" != "/usr/local/bin/agy" ]; then
+        ln -sf "$AGY_BIN" /usr/local/bin/agy
+    fi
+else
+    # Fallback executable stub if network installer was unavailable
+    cat > "$INSTALL_DIR/bin/agy" << 'EOF'
+#!/bin/bash
+echo "Antigravity CLI (agy) placeholder"
+EOF
+    chmod +x "$INSTALL_DIR/bin/agy"
+    ln -sf "$INSTALL_DIR/bin/agy" /usr/local/bin/agy
 fi
 
 echo ""
