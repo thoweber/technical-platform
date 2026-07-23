@@ -3,7 +3,7 @@ set -e
 
 echo "Installing tp-docker and verifying ACLs and non-root execution..."
 apt-get update
-apt-get install -y --fix-missing libacl1 acl tp-docker
+apt-get install -y tp-docker
 docker --version
 
 test -f /etc/tmpfiles.d/docker-acl.conf
