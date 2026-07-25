@@ -1,17 +1,32 @@
 #!/bin/bash
 set -e
 
+# Get actual non-root user
+ACTUAL_USER="${SUDO_USER:-${USER}}"
+if [ "$ACTUAL_USER" = "root" ] || [ -z "$ACTUAL_USER" ]; then
+    ACTUAL_USER=$(getent passwd 1000 | cut -d: -f1)
+fi
+
 # Install SDKMAN for all users by placing it in /opt
 export SDKMAN_DIR="/opt/sdkman"
 
 if [ ! -d "$SDKMAN_DIR" ]; then
     echo "Installing SDKMAN to $SDKMAN_DIR..."
-    curl -s "https://get.sdkman.io" | bash
+    curl -s "https://get.sdkman.io" | PROFILE=/dev/null sdkman_auto_answer=true bash
 fi
 
-# Source SDKMAN
+# Create system-wide profile integration for login shells
+cat > /etc/profile.d/sdkman.sh << 'EOF'
+export SDKMAN_DIR="/opt/sdkman"
+[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+EOF
+chmod +x /etc/profile.d/sdkman.sh
+
+# Source SDKMAN for default Java setup
 if [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]; then
+    set +e
     source "$SDKMAN_DIR/bin/sdkman-init.sh"
+    set -e
 
     # Only install 25-tem if no Java version is installed in SDKMAN
     HAS_JAVA=$(find "$SDKMAN_DIR/candidates/java" -mindepth 1 -maxdepth 1 ! -name 'current' 2>/dev/null | head -n 1)
@@ -24,6 +39,28 @@ if [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]; then
         echo "SDKMAN and Java 25-tem installed successfully."
     else
         echo "Existing Java version detected in SDKMAN ($HAS_JAVA). Skipping 25-tem installation."
+    fi
+fi
+
+# Configure non-root user's ~/.bashrc idempotently
+if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+    USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+    if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
+        BASHRC="$USER_HOME/.bashrc"
+        touch "$BASHRC"
+
+        if ! grep -q 'SDKMAN_DIR="/opt/sdkman"' "$BASHRC"; then
+            echo "Configuring SDKMAN in $BASHRC for '$ACTUAL_USER'..."
+            cat >> "$BASHRC" << 'EOF'
+
+# Technical Platform SDKMAN Configuration
+export SDKMAN_DIR="/opt/sdkman"
+[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+EOF
+        fi
+
+        chown "$ACTUAL_USER:$ACTUAL_USER" "$BASHRC" 2>/dev/null || true
+        chmod 0644 "$BASHRC" 2>/dev/null || true
     fi
 fi
 

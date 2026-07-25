@@ -1,16 +1,30 @@
 #!/bin/bash
 set -e
 
+# Get actual non-root user
+ACTUAL_USER="${SUDO_USER:-${USER}}"
+if [ "$ACTUAL_USER" = "root" ] || [ -z "$ACTUAL_USER" ]; then
+    ACTUAL_USER=$(getent passwd 1000 | cut -d: -f1)
+fi
+
 # Install NVM for all users by placing it in /opt
 export NVM_DIR="/opt/nvm"
 
 if [ ! -d "$NVM_DIR" ]; then
     echo "Installing NVM to $NVM_DIR..."
     mkdir -p "$NVM_DIR"
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.6/install.sh | NVM_DIR="$NVM_DIR" bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.6/install.sh | NVM_DIR="$NVM_DIR" PROFILE=/dev/null bash
 fi
 
-# Source NVM
+# Create system-wide profile integration for login shells
+cat > /etc/profile.d/nvm.sh << 'EOF'
+export NVM_DIR="/opt/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+EOF
+chmod +x /etc/profile.d/nvm.sh
+
+# Source NVM for default Node setup
 if [ -s "$NVM_DIR/nvm.sh" ]; then
     \. "$NVM_DIR/nvm.sh"
 
@@ -25,6 +39,29 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
         echo "NVM and Node 24 LTS installed successfully."
     else
         echo "Existing Node.js version detected in NVM ($HAS_NODE). Skipping Node 24 installation."
+    fi
+fi
+
+# Configure non-root user's ~/.bashrc idempotently
+if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+    USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+    if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
+        BASHRC="$USER_HOME/.bashrc"
+        touch "$BASHRC"
+
+        if ! grep -q 'NVM_DIR="/opt/nvm"' "$BASHRC"; then
+            echo "Configuring NVM in $BASHRC for '$ACTUAL_USER'..."
+            cat >> "$BASHRC" << 'EOF'
+
+# Technical Platform NVM Configuration
+export NVM_DIR="/opt/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+EOF
+        fi
+
+        chown "$ACTUAL_USER:$ACTUAL_USER" "$BASHRC" 2>/dev/null || true
+        chmod 0644 "$BASHRC" 2>/dev/null || true
     fi
 fi
 

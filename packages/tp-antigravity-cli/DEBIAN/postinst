@@ -12,8 +12,8 @@ mkdir -p "$INSTALL_DIR/bin"
 
 echo "Installing Antigravity CLI..."
 
-# Run installation script
-if curl -fsSL --connect-timeout 10 --max-time 30 https://antigravity.google/cli/install.sh | AGY_INSTALL_DIR="$INSTALL_DIR" bash 2>/dev/null; then
+# Run installation script with PROFILE=/dev/null to prevent modifying /root/.bashrc
+if curl -fsSL --connect-timeout 10 --max-time 30 https://antigravity.google/cli/install.sh | AGY_INSTALL_DIR="$INSTALL_DIR" PROFILE=/dev/null bash 2>/dev/null; then
     echo "Antigravity CLI install script executed successfully."
 else
     echo "Antigravity CLI setup completed."
@@ -47,6 +47,54 @@ EOF
     ln -sf "$INSTALL_DIR/bin/agy" /usr/local/bin/agy
 fi
 
+# Create system-wide profile integration for login shells
+cat > /etc/profile.d/antigravity.sh << 'EOF'
+case ":$PATH:" in
+    *:"/opt/antigravity/bin":*) ;;
+    *) export PATH="/opt/antigravity/bin:$PATH" ;;
+esac
+EOF
+chmod +x /etc/profile.d/antigravity.sh
+
+# Configure user configuration directory, config.json and .bashrc for ACTUAL_USER
+if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
+    USER_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+    if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
+        echo "Initializing Antigravity configuration for '$ACTUAL_USER'..."
+        AGY_DIR="$USER_HOME/.config/antigravity"
+        mkdir -p "$AGY_DIR"
+        AGY_CFG="$AGY_DIR/config.json"
+
+        if [ ! -f "$AGY_CFG" ]; then
+            cat > "$AGY_CFG" << 'EOF'
+{
+  "mcpServers": {}
+}
+EOF
+            chmod 0644 "$AGY_CFG"
+        fi
+
+        BASHRC="$USER_HOME/.bashrc"
+        touch "$BASHRC"
+
+        if ! grep -q '/opt/antigravity/bin' "$BASHRC"; then
+            echo "Configuring Antigravity CLI PATH in $BASHRC for '$ACTUAL_USER'..."
+            cat >> "$BASHRC" << 'EOF'
+
+# Technical Platform Antigravity CLI Configuration
+case ":$PATH:" in
+    *:"/opt/antigravity/bin":*) ;;
+    *) export PATH="/opt/antigravity/bin:$PATH" ;;
+esac
+EOF
+        fi
+
+        chown "$ACTUAL_USER:$ACTUAL_USER" "$BASHRC" 2>/dev/null || true
+        chmod 0644 "$BASHRC" 2>/dev/null || true
+        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
+    fi
+fi
+
 # Ensure shared interop script exists dynamically in /etc/profile.d/
 if [ ! -f /etc/profile.d/tp-intellij-agy-interop.sh ]; then
     cat > /etc/profile.d/tp-intellij-agy-interop.sh << 'INTEROP_EOF'
@@ -76,9 +124,6 @@ if [ "$HAS_INTELLIJ" = "true" ] && [ "$HAS_ANTIGRAVITY" = "true" ]; then
             echo "Configuring IntelliJ IDEA and Antigravity-CLI MCP interop for '$ACTUAL_USER'..."
 
             mkdir -p "$USER_HOME/.config"
-            if [ "$(id -u)" = "0" ]; then
-                chown "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
-            fi
 
             # 1. Configure IntelliJ IDEA MCP Server settings
             JB_DIR="$USER_HOME/.config/JetBrains"
@@ -105,6 +150,7 @@ if [ "$HAS_INTELLIJ" = "true" ] && [ "$HAS_ANTIGRAVITY" = "true" ]; then
   </component>
 </application>
 M_EOF
+                    chmod 0644 "$mcp_file"
                 fi
             done
 
@@ -123,15 +169,21 @@ M_EOF
   }
 }
 A_EOF
+                chmod 0644 "$AGY_CFG"
             else
                 if command -v jq >/dev/null 2>&1; then
                     tmp_cfg=$(mktemp)
-                    jq '.mcpServers["wsl-isolated-intellij-idea-mcp"] = {"url": "http://127.0.0.1:63343/debugger-mcp/sse"}' "$AGY_CFG" > "$tmp_cfg" 2>/dev/null && mv "$tmp_cfg" "$AGY_CFG" || true
+                    if jq '.mcpServers["wsl-isolated-intellij-idea-mcp"] = {"url": "http://127.0.0.1:63343/debugger-mcp/sse"}' "$AGY_CFG" > "$tmp_cfg" 2>/dev/null; then
+                        chmod 0644 "$tmp_cfg"
+                        mv "$tmp_cfg" "$AGY_CFG"
+                    else
+                        rm -f "$tmp_cfg"
+                    fi
                 fi
             fi
 
             if [ "$(id -u)" = "0" ]; then
-                chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" "$AGY_DIR" "$USER_HOME/.config" 2>/dev/null || true
+                chown -R "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
             fi
         fi
     fi

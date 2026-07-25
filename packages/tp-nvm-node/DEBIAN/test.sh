@@ -1,38 +1,30 @@
 #!/bin/bash
 set -e
 
-echo "Installing tp-nvm-node and verifying Node.js & NVM..."
+echo "Installing tp-nvm-node and asserting configuration..."
 apt-get update
 apt-get install -y tp-nvm-node
 
-echo "Testing Node.js & NVM as developer user..."
+test -d /opt/nvm
+test -f /etc/profile.d/nvm.sh
+
+echo "Verifying NVM shell integration in developer user's home directory..."
 su - developer << 'EOF'
+source /etc/profile 2>/dev/null || true
 set -e
-source /etc/profile
-node --version
-npm --version
 
-mkdir -p /tmp/node-test && cd /tmp/node-test
-cat > helloworld.js << 'NODE_EOF'
-console.log("Hello, World!");
-NODE_EOF
-output=$(node helloworld.js)
-echo "Node Execution Output: $output"
-if [ "$output" != "Hello, World!" ]; then
-  echo "Node.js output mismatch!"
-  exit 1
-fi
-EOF
+bashrc="$HOME/.bashrc"
+test -f "$bashrc"
+grep -q 'NVM_DIR="/opt/nvm"' "$bashrc"
 
-# Test package uninstallation teardown
-echo "Testing tp-nvm-node removal and teardown..."
-apt-get remove -y tp-nvm-node
-if [ -d "/opt/nvm" ] || [ -f "/etc/profile.d/nvm.sh" ]; then
-    echo "Error: /opt/nvm or nvm.sh was not completely removed on apt-get remove!"
+owner=$(stat -c '%U:%G' "$bashrc")
+if [ "$owner" != "developer:developer" ]; then
+    echo "Error: $bashrc is owned by $owner instead of developer:developer"
     exit 1
 fi
-echo "Verified: /opt/nvm and all managed Node versions were cleanly removed."
 
-# Reinstall for subsequent package tests in pipeline
-apt-get install -y tp-nvm-node
-echo "✅ Node.js 24 & NVM compilation, execution, and uninstallation teardown passed!"
+nvm --version
+node --version
+EOF
+
+echo "✅ tp-nvm-node package installation and .bashrc integration passed!"

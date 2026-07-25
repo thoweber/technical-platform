@@ -34,12 +34,29 @@ set -e
 
 mcp_file="$HOME/.config/JetBrains/IntelliJIdea2026.2/options/mcpServer.xml"
 test -f "$mcp_file"
+test -r "$mcp_file"
+test -w "$mcp_file"
+owner_mcp=$(stat -c '%U:%G' "$mcp_file")
+if [ "$owner_mcp" != "developer:developer" ]; then
+    echo "Error: $mcp_file is owned by $owner_mcp instead of developer:developer"
+    exit 1
+fi
+
 grep -q "McpServerSettings" "$mcp_file"
 grep -q "64343" "$mcp_file"
 
 agy_file="$HOME/.config/antigravity/config.json"
 test -f "$agy_file"
+test -r "$agy_file"
+test -w "$agy_file"
+owner_agy=$(stat -c '%U:%G' "$agy_file")
+if [ "$owner_agy" != "developer:developer" ]; then
+    echo "Error: $agy_file is owned by $owner_agy instead of developer:developer"
+    exit 1
+fi
+
 jq -e '.mcpServers["wsl-isolated-intellij-idea-mcp"].url == "http://127.0.0.1:63343/debugger-mcp/sse"' "$agy_file"
+echo "Verified: mcpServer.xml and config.json exist and are owned by developer:developer with read/write access."
 EOF
 
 echo "✅ IntelliJ IDEA & MCP Interop synchronous configuration assertions passed!"

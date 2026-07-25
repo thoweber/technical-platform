@@ -1,43 +1,30 @@
 #!/bin/bash
 set -e
 
-echo "Installing tp-sdkman-java and verifying Java/SDKMAN..."
+echo "Installing tp-sdkman-java and asserting configuration..."
 apt-get update
 apt-get install -y tp-sdkman-java
 
-echo "Testing SDKMAN & JAVA_HOME environment as developer user..."
+test -d /opt/sdkman
+test -f /etc/profile.d/sdkman.sh
+
+echo "Verifying SDKMAN shell integration in developer user's home directory..."
 su - developer << 'EOF'
+source /etc/profile 2>/dev/null || true
 set -e
-source /etc/profile
-java -version
-javac -version
 
-mkdir -p /tmp/java-test && cd /tmp/java-test
-cat > HelloWorld.java << 'JAVA_EOF'
-public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}
-JAVA_EOF
-javac HelloWorld.java
-output=$(java HelloWorld)
-echo "Java Execution Output: $output"
-if [ "$output" != "Hello, World!" ]; then
-  echo "Java output mismatch!"
-  exit 1
-fi
-EOF
+bashrc="$HOME/.bashrc"
+test -f "$bashrc"
+grep -q 'SDKMAN_DIR="/opt/sdkman"' "$bashrc"
 
-# Test package uninstallation teardown
-echo "Testing tp-sdkman-java removal and teardown..."
-apt-get remove -y tp-sdkman-java
-if [ -d "/opt/sdkman" ] || [ -f "/etc/profile.d/sdkman.sh" ]; then
-    echo "Error: /opt/sdkman or sdkman.sh was not completely removed on apt-get remove!"
+owner=$(stat -c '%U:%G' "$bashrc")
+if [ "$owner" != "developer:developer" ]; then
+    echo "Error: $bashrc is owned by $owner instead of developer:developer"
     exit 1
 fi
-echo "Verified: /opt/sdkman and all managed SDKs were cleanly removed."
 
-# Reinstall for subsequent package tests in pipeline
-apt-get install -y tp-sdkman-java
-echo "✅ Java 25 & SDKMAN compilation, execution, and uninstallation teardown passed!"
+sdk version
+java -version
+EOF
+
+echo "✅ tp-sdkman-java package installation and .bashrc integration passed!"

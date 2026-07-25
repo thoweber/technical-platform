@@ -34,8 +34,6 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
         echo "Configuring IntelliJ IDEA settings for '$ACTUAL_USER'..."
         
         mkdir -p "$USER_HOME/.config"
-        chown "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
-
         JB_DIR="$USER_HOME/.config/JetBrains"
         mkdir -p "$JB_DIR"
 
@@ -62,6 +60,7 @@ if [ -n "$ACTUAL_USER" ] && [ "$ACTUAL_USER" != "root" ]; then
   </component>
 </application>
 EOF
+                chmod 0644 "$font_file"
             else
                 if ! grep -q 'SECONDARY_FONT_FAMILY' "$font_file"; then
                     if grep -q '<component name="DefaultFont">' "$font_file"; then
@@ -71,7 +70,9 @@ EOF
             fi
         done
 
-        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" "$USER_HOME/.config" 2>/dev/null || true
+        if [ "$(id -u)" = "0" ]; then
+            chown -R "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
+        fi
     fi
 fi
 
@@ -104,9 +105,6 @@ if [ "$HAS_INTELLIJ" = "true" ] && [ "$HAS_ANTIGRAVITY" = "true" ]; then
             echo "Configuring IntelliJ IDEA and Antigravity-CLI MCP interop for '$ACTUAL_USER'..."
 
             mkdir -p "$USER_HOME/.config"
-            if [ "$(id -u)" = "0" ]; then
-                chown "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
-            fi
 
             # 1. Configure IntelliJ IDEA MCP Server settings
             JB_DIR="$USER_HOME/.config/JetBrains"
@@ -133,6 +131,7 @@ if [ "$HAS_INTELLIJ" = "true" ] && [ "$HAS_ANTIGRAVITY" = "true" ]; then
   </component>
 </application>
 M_EOF
+                    chmod 0644 "$mcp_file"
                 fi
             done
 
@@ -151,15 +150,21 @@ M_EOF
   }
 }
 A_EOF
+                chmod 0644 "$AGY_CFG"
             else
                 if command -v jq >/dev/null 2>&1; then
                     tmp_cfg=$(mktemp)
-                    jq '.mcpServers["wsl-isolated-intellij-idea-mcp"] = {"url": "http://127.0.0.1:63343/debugger-mcp/sse"}' "$AGY_CFG" > "$tmp_cfg" 2>/dev/null && mv "$tmp_cfg" "$AGY_CFG" || true
+                    if jq '.mcpServers["wsl-isolated-intellij-idea-mcp"] = {"url": "http://127.0.0.1:63343/debugger-mcp/sse"}' "$AGY_CFG" > "$tmp_cfg" 2>/dev/null; then
+                        chmod 0644 "$tmp_cfg"
+                        mv "$tmp_cfg" "$AGY_CFG"
+                    else
+                        rm -f "$tmp_cfg"
+                    fi
                 fi
             fi
 
             if [ "$(id -u)" = "0" ]; then
-                chown -R "$ACTUAL_USER:$ACTUAL_USER" "$JB_DIR" "$AGY_DIR" "$USER_HOME/.config" 2>/dev/null || true
+                chown -R "$ACTUAL_USER:$ACTUAL_USER" "$USER_HOME/.config" 2>/dev/null || true
             fi
         fi
     fi
