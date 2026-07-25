@@ -1,0 +1,125 @@
+Package: tp-angular-cli
+Version: 1.0.1
+Architecture: all
+Depends: tp-nvm-node
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: devel
+Filename: pool/main/t/tp-angular-cli/tp-angular-cli_1.0.1_all.deb
+Size: 1328
+SHA256: 3accd05fc696da8ce5fe3a36bc2b5ce134c06ff7ff170ff46791c4ad5da41a09
+SHA1: 4579ce8d37495eee5aa5cca5526b759f4991b991
+MD5sum: ce08da259adaf4b14cf22fc2714e808d
+Description: Angular CLI installation for Technical Platform WSL
+ This package installs Angular CLI (@angular/cli) globally via npm
+ for Technical Platform WSL.
+
+Package: tp-antigravity-cli
+Version: 1.0.13
+Architecture: all
+Depends: curl, ca-certificates, git, jq
+Suggests: tp-intellij-agy-interop
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: devel
+Filename: pool/main/t/tp-antigravity-cli/tp-antigravity-cli_1.0.13_all.deb
+Size: 3126
+SHA256: ff90efd59b0caf5b76b895aeea3b2b8006a969c3ef7507ca807ab5628fc706d9
+SHA1: 4572f6ba31c730e620fe393c0243ea175431b1a9
+MD5sum: a06b7bfd0d23cc6232ff07746c9c5e32
+Description: Antigravity CLI installation for Technical Platform WSL
+ This package installs the Antigravity CLI binary (agy) system-wide
+ in /opt/antigravity and configures environment PATH.
+
+Package: tp-docker
+Version: 1.0.1
+Architecture: all
+Depends: docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin, acl
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: admin
+Filename: pool/main/t/tp-docker/tp-docker_1.0.1_all.deb
+Size: 1956
+SHA256: ae4e668eab46723c9699e97f32b6e99f4d5e54823f8d4842aef2cc7b2f22e81c
+SHA1: b4b4e833aab3909ce5673009d145b76ccfd1a7d7
+MD5sum: edcd026fa66a4ef24537c9ae70c94beb
+Description: Docker CE complete installation for Technical Platform WSL
+ This metapackage installs the complete Docker CE suite including:
+ - Docker CE Engine
+ - Docker CLI
+ - containerd runtime
+ - Docker Buildx plugin
+ - Docker Compose plugin
+ The installation automatically configures user group membership and POSIX ACLs
+ on the Docker socket for immediate sudo-less execution.
+
+Package: tp-intellij-agy-interop
+Version: 1.0.3
+Architecture: all
+Depends: jq, ca-certificates
+Enhances: tp-intellij-idea, tp-antigravity-cli
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: devel
+Filename: pool/main/t/tp-intellij-agy-interop/tp-intellij-agy-interop_1.0.3_all.deb
+Size: 3234
+SHA256: ea639a2027b63daf24260f291dc85419e32917fcfe1528e695c88513fffe4536
+SHA1: 9952afc9bf8e96995eb4f02c2d2708cba0149c12
+MD5sum: 4acf02d5475508828e6e952555e6c9e7
+Description: IntelliJ IDEA and Antigravity-CLI MCP Interoperability
+ This package configures MCP (Model Context Protocol) integration between
+ IntelliJ IDEA and Antigravity CLI in Technical Platform WSL.
+
+Package: tp-intellij-idea
+Version: 1.0.22
+Architecture: all
+Depends: snapd, libxtst6, libxrender1, libxi6, libxrandr2, libxcursor1, libxinerama1, jq
+Recommends: tp-sdkman-java
+Suggests: tp-intellij-agy-interop
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: devel
+Filename: pool/main/t/tp-intellij-idea/tp-intellij-idea_1.0.22_all.deb
+Size: 2856
+SHA256: ed435dcb787a26212c4c9be306b07263cd3f9822ba5c831e8e6c40cd4fa8f5bb
+SHA1: c7976b4cb8f6bde9abe2047376e251b00a910fb5
+MD5sum: 4697a256e74565b9da98193b80596277
+Description: IntelliJ IDEA Ultimate installation for Technical Platform WSL
+ This package installs IntelliJ IDEA Ultimate via snapd and configures
+ default font fallbacks for Technical Platform WSL.
+
+Package: tp-nvm-node
+Version: 1.0.2
+Architecture: all
+Depends: curl
+Recommends: tp-angular-cli
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: devel
+Filename: pool/main/t/tp-nvm-node/tp-nvm-node_1.0.2_all.deb
+Size: 2046
+SHA256: 15b5bbc66f1f7029f24fd0685520f3755f51794b6f783d8d209b5a83f0268704
+SHA1: 2bfbdfcd081233eabc5743f47190420ff5e7b09b
+MD5sum: 38de23b3a0fd7f44f37202626d4c2540
+Description: NVM with Node 24 LTS for Technical Platform WSL
+ This package installs NVM (Node Version Manager) and Node.js 24 LTS
+ for all users in Technical Platform WSL.
+ NVM allows managing multiple Node.js versions.
+
+Package: tp-sdkman-java
+Version: 1.0.1
+Architecture: all
+Depends: curl, zip, unzip
+Maintainer: Technical Platform <noreply@example.com>
+Priority: optional
+Section: devel
+Filename: pool/main/t/tp-sdkman-java/tp-sdkman-java_1.0.1_all.deb
+Size: 2066
+SHA256: cd065bcb546dab043c24d584db59c6529913081f2aaf6efbefd07ce708d0188e
+SHA1: c5fa72b6e0378293a761bfcfc0fe712d462b6e14
+MD5sum: e1bee9a599365577c2aef8c9c783af65
+Description: SDKMAN with Java 25 for Technical Platform WSL
+ This package installs SDKMAN and Java 25 (Temurin) for all users.
+ SDKMAN is a tool for managing parallel versions of multiple SDKs.
+ Java 25 (Eclipse Temurin) is pre-installed and set as default.
+
